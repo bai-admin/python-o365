@@ -48,6 +48,8 @@ class Task(ApiComponent):
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
+        self.update_raw_cloud_data(cloud_data)
+
         self.task_id = cloud_data.get("id")
 
         # Choose the main_resource passed in kwargs over parent main_resource
@@ -65,6 +67,8 @@ class Task(ApiComponent):
         self._track_changes = TrackerSet(casing=cc)
         self.folder_id = kwargs.get("folder_id")
         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+        self.update_raw_cloud_data(cloud_data)
 
         self.task_id = cloud_data.get(cc("id"), None)
         self.__subject = cloud_data.get(cc("title"), kwargs.get("subject", "") or "")
@@ -491,6 +495,8 @@ class Folder(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+        self.update_raw_cloud_data(cloud_data)
 
         self.name = cloud_data.get(self._cc("displayName"), "")
         self.folder_id = cloud_data.get(self._cc("id"), None)

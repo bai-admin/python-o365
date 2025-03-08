@@ -2,78 +2,88 @@ import logging
 
 from dateutil.parser import parse
 
-from .utils import ApiComponent, TrackerSet, NEXT_LINK_KEYWORD, Pagination
 from .address_book import Contact
 from .drive import Storage
+from .utils import NEXT_LINK_KEYWORD, ApiComponent, Pagination, TrackerSet
 
 log = logging.getLogger(__name__)
 
 
 class SharepointListColumn(ApiComponent):
-    """ A Sharepoint List column within a SharepointList """
+    """A Sharepoint List column within a SharepointList"""
 
     _endpoints = {}
 
     def __init__(self, *, parent=None, con=None, **kwargs):
         if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
+            raise ValueError("Need a parent or a connection but not both")
         self.con = parent.con if parent else con
 
         # Choose the main_resource passed in kwargs over the parent main_resource
-        main_resource = kwargs.pop('main_resource', None) or (
-            getattr(parent, 'main_resource', None) if parent else None)
+        main_resource = kwargs.pop("main_resource", None) or (
+            getattr(parent, "main_resource", None) if parent else None
+        )
 
-        super().__init__(protocol=parent.protocol if parent else kwargs.get('protocol'), main_resource=main_resource)
+        super().__init__(
+            protocol=parent.protocol if parent else kwargs.get("protocol"),
+            main_resource=main_resource,
+        )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
-        self.object_id = cloud_data.get('id')
-        self.column_group = cloud_data.get(self._cc('columnGroup'), None)
-        self.description = cloud_data.get(self._cc('description'), None)
-        self.display_name = cloud_data.get(self._cc('displayName'), None)
-        self.enforce_unique_values = cloud_data.get(self._cc('enforceUniqueValues'), None)
-        self.hidden = cloud_data.get(self._cc('hidden'), None)
-        self.indexed = cloud_data.get(self._cc('indexed'), None)
-        self.internal_name = cloud_data.get(self._cc('name'), None)
-        self.read_only = cloud_data.get(self._cc('readOnly'), None)
-        self.required = cloud_data.get(self._cc('required'), None)
+        self.update_raw_cloud_data(cloud_data)
+
+        self.object_id = cloud_data.get("id")
+        self.column_group = cloud_data.get(self._cc("columnGroup"), None)
+        self.description = cloud_data.get(self._cc("description"), None)
+        self.display_name = cloud_data.get(self._cc("displayName"), None)
+        self.enforce_unique_values = cloud_data.get(
+            self._cc("enforceUniqueValues"), None
+        )
+        self.hidden = cloud_data.get(self._cc("hidden"), None)
+        self.indexed = cloud_data.get(self._cc("indexed"), None)
+        self.internal_name = cloud_data.get(self._cc("name"), None)
+        self.read_only = cloud_data.get(self._cc("readOnly"), None)
+        self.required = cloud_data.get(self._cc("required"), None)
 
         # identify the sharepoint column type and set it
         # Graph api doesn't return the type for managed metadata and link column
-        if cloud_data.get(self._cc('text'), None) is not None:
-            self.field_type = 'text'
-        elif cloud_data.get(self._cc('choice'), None) is not None:
-            self.field_type = 'choice'
-        elif cloud_data.get(self._cc('number'), None) is not None:
-            self.field_type = 'number'
-        elif cloud_data.get(self._cc('currency'), None) is not None:
-            self.field_type = 'currency'
-        elif cloud_data.get(self._cc('dateTime'), None) is not None:
-            self.field_type = 'dateTime'
-        elif cloud_data.get(self._cc('lookup'), None) is not None:
-            self.field_type = 'lookup'
-        elif cloud_data.get(self._cc('boolean'), None) is not None:
-            self.field_type = 'boolean'
-        elif cloud_data.get(self._cc('calculated'), None) is not None:
-            self.field_type = 'calculated'
-        elif cloud_data.get(self._cc('personOrGroup'), None) is not None:
-            self.field_type = 'personOrGroup'
+        if cloud_data.get(self._cc("text"), None) is not None:
+            self.field_type = "text"
+        elif cloud_data.get(self._cc("choice"), None) is not None:
+            self.field_type = "choice"
+        elif cloud_data.get(self._cc("number"), None) is not None:
+            self.field_type = "number"
+        elif cloud_data.get(self._cc("currency"), None) is not None:
+            self.field_type = "currency"
+        elif cloud_data.get(self._cc("dateTime"), None) is not None:
+            self.field_type = "dateTime"
+        elif cloud_data.get(self._cc("lookup"), None) is not None:
+            self.field_type = "lookup"
+        elif cloud_data.get(self._cc("boolean"), None) is not None:
+            self.field_type = "boolean"
+        elif cloud_data.get(self._cc("calculated"), None) is not None:
+            self.field_type = "calculated"
+        elif cloud_data.get(self._cc("personOrGroup"), None) is not None:
+            self.field_type = "personOrGroup"
         else:
             self.field_type = None
 
     def __repr__(self):
-        return 'List Column: {0}-{1}'.format(self.display_name, self.field_type)
+        return "List Column: {0}-{1}".format(self.display_name, self.field_type)
 
     def __eq__(self, other):
         return self.object_id == other.object_id
 
 
 class SharepointListItem(ApiComponent):
-    _endpoints = {'update_list_item': '/items/{item_id}/fields',
-                  'delete_list_item': '/items/{item_id}'}
+    _endpoints = {
+        "update_list_item": "/items/{item_id}/fields",
+        "delete_list_item": "/items/{item_id}",
+    }
 
     def __init__(self, *, parent=None, con=None, **kwargs):
-        """ A Sharepoint ListItem within a SharepointList
+        """A Sharepoint ListItem within a SharepointList
 
         :param parent: parent object
         :type parent: SharepointList
@@ -84,43 +94,63 @@ class SharepointListItem(ApiComponent):
          (kwargs)
         """
         if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
+            raise ValueError("Need a parent or a connection but not both")
         self.con = parent.con if parent else con
         self._parent = parent
 
         # Choose the main_resource passed in kwargs over parent main_resource
-        main_resource = kwargs.pop('main_resource', None) or (
-            getattr(parent, 'main_resource', None) if parent else None)
+        main_resource = kwargs.pop("main_resource", None) or (
+            getattr(parent, "main_resource", None) if parent else None
+        )
 
         super().__init__(
-            protocol=parent.protocol if parent else kwargs.get('protocol'),
-            main_resource=main_resource)
+            protocol=parent.protocol if parent else kwargs.get("protocol"),
+            main_resource=main_resource,
+        )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
+        self.update_raw_cloud_data(cloud_data)
+
         self._track_changes = TrackerSet(casing=self._cc)
-        self.object_id = cloud_data.get('id')
-        created = cloud_data.get(self._cc('createdDateTime'), None)
-        modified = cloud_data.get(self._cc('lastModifiedDateTime'), None)
+        self.object_id = cloud_data.get("id")
+        created = cloud_data.get(self._cc("createdDateTime"), None)
+        modified = cloud_data.get(self._cc("lastModifiedDateTime"), None)
         local_tz = self.protocol.timezone
         self.created = parse(created).astimezone(local_tz) if created else None
         self.modified = parse(modified).astimezone(local_tz) if modified else None
 
-        created_by = cloud_data.get(self._cc('createdBy'), {}).get('user', None)
-        self.created_by = Contact(con=self.con, protocol=self.protocol,
-                                  **{self._cloud_data_key: created_by}) if created_by else None
-        modified_by = cloud_data.get(self._cc('lastModifiedBy'), {}).get('user', None)
-        self.modified_by = Contact(con=self.con, protocol=self.protocol,
-                                   **{self._cloud_data_key: modified_by}) if modified_by else None
+        created_by = cloud_data.get(self._cc("createdBy"), {}).get("user", None)
+        self.created_by = (
+            Contact(
+                con=self.con,
+                protocol=self.protocol,
+                **{self._cloud_data_key: created_by},
+            )
+            if created_by
+            else None
+        )
+        modified_by = cloud_data.get(self._cc("lastModifiedBy"), {}).get("user", None)
+        self.modified_by = (
+            Contact(
+                con=self.con,
+                protocol=self.protocol,
+                **{self._cloud_data_key: modified_by},
+            )
+            if modified_by
+            else None
+        )
 
-        self.web_url = cloud_data.get(self._cc('webUrl'), None)
+        self.web_url = cloud_data.get(self._cc("webUrl"), None)
 
-        self.content_type_id = cloud_data.get(self._cc('contentType'), {}).get('id', None)
+        self.content_type_id = cloud_data.get(self._cc("contentType"), {}).get(
+            "id", None
+        )
 
-        self.fields = cloud_data.get(self._cc('fields'), None)
+        self.fields = cloud_data.get(self._cc("fields"), None)
 
     def __repr__(self):
-        return 'List Item: {}'.format(self.web_url)
+        return "List Item: {}".format(self.web_url)
 
     def __eq__(self, other):
         return self.object_id == other.object_id
@@ -130,10 +160,13 @@ class SharepointListItem(ApiComponent):
 
     def _valid_field(self, field):
         # Verify the used field names are valid internal field names
-        valid_field_names = self.fields if self.fields \
-            else self._parent.column_name_cw.values() \
-            if self._parent \
+        valid_field_names = (
+            self.fields
+            if self.fields
+            else self._parent.column_name_cw.values()
+            if self._parent
             else None
+        )
         if valid_field_names:
             return field in valid_field_names
 
@@ -151,7 +184,9 @@ class SharepointListItem(ApiComponent):
             if self._valid_field(field):
                 self._track_changes.add(field)
             else:
-                raise ValueError('"{}" is not a valid internal field name'.format(field))
+                raise ValueError(
+                    '"{}" is not a valid internal field name'.format(field)
+                )
 
         # Update existing instance of fields, or create a fields instance if needed
         if self.fields:
@@ -165,9 +200,14 @@ class SharepointListItem(ApiComponent):
         if not self._track_changes:
             return True  # there's nothing to update
 
-        url = self.build_url(self._endpoints.get('update_list_item').format(item_id=self.object_id))
-        update = {field: value for field, value in self.fields.items()
-                  if self._cc(field) in self._track_changes}
+        url = self.build_url(
+            self._endpoints.get("update_list_item").format(item_id=self.object_id)
+        )
+        update = {
+            field: value
+            for field, value in self.fields.items()
+            if self._cc(field) in self._track_changes
+        }
 
         response = self.con.patch(url, update)
         if not response:
@@ -176,22 +216,24 @@ class SharepointListItem(ApiComponent):
         return True
 
     def delete(self):
-        url = self.build_url(self._endpoints.get('delete_list_item').format(item_id=self.object_id))
+        url = self.build_url(
+            self._endpoints.get("delete_list_item").format(item_id=self.object_id)
+        )
         response = self.con.delete(url)
         return bool(response)
 
 
 class SharepointList(ApiComponent):
     _endpoints = {
-        'get_items': '/items',
-        'get_item_by_id': '/items/{item_id}',
-        'get_list_columns': '/columns'
+        "get_items": "/items",
+        "get_item_by_id": "/items/{item_id}",
+        "get_list_columns": "/columns",
     }
     list_item_constructor = SharepointListItem
     list_column_constructor = SharepointListColumn
 
     def __init__(self, *, parent=None, con=None, **kwargs):
-        """ A Sharepoint site List
+        """A Sharepoint site List
 
         :param parent: parent object
         :type parent: Site
@@ -202,80 +244,102 @@ class SharepointList(ApiComponent):
          (kwargs)
         """
         if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
+            raise ValueError("Need a parent or a connection but not both")
         self.con = parent.con if parent else con
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
-        self.object_id = cloud_data.get('id')
+        self.update_raw_cloud_data(cloud_data)
+
+        self.object_id = cloud_data.get("id")
 
         # Choose the main_resource passed in kwargs over parent main_resource
-        main_resource = kwargs.pop('main_resource', None) or (
-            getattr(parent, 'main_resource', None) if parent else None)
+        main_resource = kwargs.pop("main_resource", None) or (
+            getattr(parent, "main_resource", None) if parent else None
+        )
 
         # prefix with the current known list
-        resource_prefix = '/lists/{list_id}'.format(list_id=self.object_id)
-        main_resource = '{}{}'.format(main_resource, resource_prefix)
+        resource_prefix = "/lists/{list_id}".format(list_id=self.object_id)
+        main_resource = "{}{}".format(main_resource, resource_prefix)
 
         super().__init__(
-            protocol=parent.protocol if parent else kwargs.get('protocol'),
-            main_resource=main_resource)
+            protocol=parent.protocol if parent else kwargs.get("protocol"),
+            main_resource=main_resource,
+        )
 
-        self.name = cloud_data.get(self._cc('name'), '')
-        self.display_name = cloud_data.get(self._cc('displayName'), '')
+        self.name = cloud_data.get(self._cc("name"), "")
+        self.display_name = cloud_data.get(self._cc("displayName"), "")
         if not self.name:
             self.name = self.display_name
-        self.description = cloud_data.get(self._cc('description'), '')
-        self.web_url = cloud_data.get(self._cc('webUrl'))
+        self.description = cloud_data.get(self._cc("description"), "")
+        self.web_url = cloud_data.get(self._cc("webUrl"))
 
-        created = cloud_data.get(self._cc('createdDateTime'), None)
-        modified = cloud_data.get(self._cc('lastModifiedDateTime'), None)
+        created = cloud_data.get(self._cc("createdDateTime"), None)
+        modified = cloud_data.get(self._cc("lastModifiedDateTime"), None)
         local_tz = self.protocol.timezone
         self.created = parse(created).astimezone(local_tz) if created else None
-        self.modified = parse(modified).astimezone(
-            local_tz) if modified else None
+        self.modified = parse(modified).astimezone(local_tz) if modified else None
 
-        created_by = cloud_data.get(self._cc('createdBy'), {}).get('user', None)
-        self.created_by = (Contact(con=self.con, protocol=self.protocol,
-                                   **{self._cloud_data_key: created_by})
-                           if created_by else None)
-        modified_by = cloud_data.get(self._cc('lastModifiedBy'), {}).get('user',
-                                                                         None)
-        self.modified_by = (Contact(con=self.con, protocol=self.protocol,
-                                    **{self._cloud_data_key: modified_by})
-                            if modified_by else None)
+        created_by = cloud_data.get(self._cc("createdBy"), {}).get("user", None)
+        self.created_by = (
+            Contact(
+                con=self.con,
+                protocol=self.protocol,
+                **{self._cloud_data_key: created_by},
+            )
+            if created_by
+            else None
+        )
+        modified_by = cloud_data.get(self._cc("lastModifiedBy"), {}).get("user", None)
+        self.modified_by = (
+            Contact(
+                con=self.con,
+                protocol=self.protocol,
+                **{self._cloud_data_key: modified_by},
+            )
+            if modified_by
+            else None
+        )
 
         # list info
-        lst_info = cloud_data.get('list', {})
+        lst_info = cloud_data.get("list", {})
         self.content_types_enabled = lst_info.get(
-            self._cc('contentTypesEnabled'), False)
-        self.hidden = lst_info.get(self._cc('hidden'), False)
-        self.template = lst_info.get(self._cc('template'), False)
+            self._cc("contentTypesEnabled"), False
+        )
+        self.hidden = lst_info.get(self._cc("hidden"), False)
+        self.template = lst_info.get(self._cc("template"), False)
 
         # Crosswalk between display name of user defined columns to internal name
-        self.column_name_cw = {col.display_name: col.internal_name for
-                               col in self.get_list_columns() if not col.read_only}
+        self.column_name_cw = {
+            col.display_name: col.internal_name
+            for col in self.get_list_columns()
+            if not col.read_only
+        }
 
     def __eq__(self, other):
         return self.object_id == other.object_id
-    
+
     def build_field_filter(self, expand_fields):
         if expand_fields == True:
-            return 'fields'
+            return "fields"
         elif isinstance(expand_fields, list):
-            result = ''
+            result = ""
             for field in expand_fields:
                 if field in self.column_name_cw.values():
-                    result += field + ','         
+                    result += field + ","
                 elif field in self.column_name_cw:
-                    result += self.column_name_cw[field] + ','
+                    result += self.column_name_cw[field] + ","
                 else:
-                    log.warning('"{}" is not a valid field name - check case'.format(field))
-            if result != '':
-                return 'fields(select=' + result.rstrip(',') + ')'
-            
-    def get_items(self, limit=None, *, query=None, order_by=None, batch=None, expand_fields=None):
-        """ Returns a collection of Sharepoint Items
+                    log.warning(
+                        '"{}" is not a valid field name - check case'.format(field)
+                    )
+            if result != "":
+                return "fields(select=" + result.rstrip(",") + ")"
+
+    def get_items(
+        self, limit=None, *, query=None, order_by=None, batch=None, expand_fields=None
+    ):
+        """Returns a collection of Sharepoint Items
         :param int limit: max no. of items to get. Over 999 uses batch.
         :param query: applies a filter to the request.
         :type query: Query or str
@@ -285,27 +349,27 @@ class SharepointList(ApiComponent):
          batches allowing to retrieve more items than the limit.
         :param expand_fields: specify user-defined fields to return,
          True will return all fields
-        :type expand_fields: list or bool         
+        :type expand_fields: list or bool
         :return: list of Sharepoint Items
         :rtype: list[SharepointListItem] or Pagination
         """
 
-        url = self.build_url(self._endpoints.get('get_items'))
+        url = self.build_url(self._endpoints.get("get_items"))
 
         if limit is None or limit > self.protocol.max_top_value:
             batch = self.protocol.max_top_value
 
-        params = {'$top': batch if batch else limit}
+        params = {"$top": batch if batch else limit}
 
         if expand_fields is not None:
-            params['expand'] = self.build_field_filter(expand_fields)
-            
+            params["expand"] = self.build_field_filter(expand_fields)
+
         if order_by:
-            params['$orderby'] = order_by
+            params["$orderby"] = order_by
 
         if query:
             if isinstance(query, str):
-                params['$filter'] = query
+                params["$filter"] = query
             else:
                 params.update(query.as_params())
 
@@ -317,32 +381,41 @@ class SharepointList(ApiComponent):
         data = response.json()
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
-        items = [self.list_item_constructor(parent=self, **{self._cloud_data_key: item})
-                 for item in data.get('value', [])]
+        items = [
+            self.list_item_constructor(parent=self, **{self._cloud_data_key: item})
+            for item in data.get("value", [])
+        ]
 
         if batch and next_link:
-            return Pagination(parent=self, data=items, constructor=self.list_item_constructor,
-                              next_link=next_link, limit=limit)
+            return Pagination(
+                parent=self,
+                data=items,
+                constructor=self.list_item_constructor,
+                next_link=next_link,
+                limit=limit,
+            )
         else:
             return items
 
     def get_item_by_id(self, item_id, expand_fields=None):
-        """ Returns a sharepoint list item based on id
+        """Returns a sharepoint list item based on id
         :param int item_id: item id to search for
         :param expand_fields: specify user-defined fields to return,
          True will return all fields
-        :type expand_fields: list or bool         
+        :type expand_fields: list or bool
         :return: Sharepoint Item
         :rtype: SharepointListItem
         """
 
-        url = self.build_url(self._endpoints.get('get_item_by_id').format(item_id=item_id))
-        
+        url = self.build_url(
+            self._endpoints.get("get_item_by_id").format(item_id=item_id)
+        )
+
         params = {}
-        
+
         if expand_fields is not None:
-            params['expand'] = self.build_field_filter(expand_fields)
-            
+            params["expand"] = self.build_field_filter(expand_fields)
+
         response = self.con.get(url, params=params)
 
         if not response:
@@ -353,9 +426,9 @@ class SharepointList(ApiComponent):
         return self.list_item_constructor(parent=self, **{self._cloud_data_key: data})
 
     def get_list_columns(self):
-        """ Returns the sharepoint list columns """
+        """Returns the sharepoint list columns"""
 
-        url = self.build_url(self._endpoints.get('get_list_columns'))
+        url = self.build_url(self._endpoints.get("get_list_columns"))
 
         response = self.con.get(url)
 
@@ -364,8 +437,10 @@ class SharepointList(ApiComponent):
 
         data = response.json()
 
-        return [self.list_column_constructor(parent=self, **{self._cloud_data_key: column})
-                for column in data.get('value', [])]
+        return [
+            self.list_column_constructor(parent=self, **{self._cloud_data_key: column})
+            for column in data.get("value", [])
+        ]
 
     def create_list_item(self, new_data):
         """Create new list item
@@ -375,9 +450,9 @@ class SharepointList(ApiComponent):
         :rtype: SharepointListItem
         """
 
-        url = self.build_url(self._endpoints.get('get_items'))
+        url = self.build_url(self._endpoints.get("get_items"))
 
-        response = self.con.post(url, {'fields': new_data})
+        response = self.con.post(url, {"fields": new_data})
         if not response:
             return False
 
@@ -386,12 +461,14 @@ class SharepointList(ApiComponent):
         return self.list_item_constructor(parent=self, **{self._cloud_data_key: data})
 
     def delete_list_item(self, item_id):
-        """ Delete an existing list item
+        """Delete an existing list item
 
         :param item_id: Id of the item to be delted
         """
 
-        url = self.build_url(self._endpoints.get('get_item_by_id').format(item_id=item_id))
+        url = self.build_url(
+            self._endpoints.get("get_item_by_id").format(item_id=item_id)
+        )
 
         response = self.con.delete(url)
 
@@ -399,17 +476,17 @@ class SharepointList(ApiComponent):
 
 
 class Site(ApiComponent):
-    """ A Sharepoint Site """
+    """A Sharepoint Site"""
 
     _endpoints = {
-        'get_subsites': '/sites',
-        'get_lists': '/lists',
-        'get_list_by_name': '/lists/{display_name}'
+        "get_subsites": "/sites",
+        "get_lists": "/lists",
+        "get_list_by_name": "/lists/{display_name}",
     }
     list_constructor = SharepointList
 
     def __init__(self, *, parent=None, con=None, **kwargs):
-        """ A Sharepoint site List
+        """A Sharepoint site List
 
         :param parent: parent object
         :type parent: Sharepoint
@@ -420,58 +497,64 @@ class Site(ApiComponent):
          (kwargs)
         """
         if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
+            raise ValueError("Need a parent or a connection but not both")
         self.con = parent.con if parent else con
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
-        self.object_id = cloud_data.get('id')
+        self.update_raw_cloud_data(cloud_data)
+
+        self.object_id = cloud_data.get("id")
 
         # Choose the main_resource passed in kwargs over parent main_resource
-        main_resource = kwargs.pop('main_resource', None) or (
-            getattr(parent, 'main_resource', None) if parent else None)
+        main_resource = kwargs.pop("main_resource", None) or (
+            getattr(parent, "main_resource", None) if parent else None
+        )
 
         # prefix with the current known site
-        resource_prefix = 'sites/{site_id}'.format(site_id=self.object_id)
-        main_resource = (resource_prefix if isinstance(parent, Site)
-                         else '{}{}'.format(main_resource, resource_prefix))
+        resource_prefix = "sites/{site_id}".format(site_id=self.object_id)
+        main_resource = (
+            resource_prefix
+            if isinstance(parent, Site)
+            else "{}{}".format(main_resource, resource_prefix)
+        )
 
         super().__init__(
-            protocol=parent.protocol if parent else kwargs.get('protocol'),
-            main_resource=main_resource)
+            protocol=parent.protocol if parent else kwargs.get("protocol"),
+            main_resource=main_resource,
+        )
 
-        self.root = 'root' in cloud_data  # True or False
+        self.root = "root" in cloud_data  # True or False
         # Fallback to manual site
-        self.name = cloud_data.get(self._cc('name'), kwargs.get('name', ''))
-        self.display_name = cloud_data.get(self._cc('displayName'), '')
+        self.name = cloud_data.get(self._cc("name"), kwargs.get("name", ""))
+        self.display_name = cloud_data.get(self._cc("displayName"), "")
         if not self.name:
             self.name = self.display_name
-        self.description = cloud_data.get(self._cc('description'), '')
-        self.web_url = cloud_data.get(self._cc('webUrl'))
+        self.description = cloud_data.get(self._cc("description"), "")
+        self.web_url = cloud_data.get(self._cc("webUrl"))
 
-        created = cloud_data.get(self._cc('createdDateTime'), None)
-        modified = cloud_data.get(self._cc('lastModifiedDateTime'), None)
+        created = cloud_data.get(self._cc("createdDateTime"), None)
+        modified = cloud_data.get(self._cc("lastModifiedDateTime"), None)
         local_tz = self.protocol.timezone
         self.created = parse(created).astimezone(local_tz) if created else None
-        self.modified = parse(modified).astimezone(
-            local_tz) if modified else None
+        self.modified = parse(modified).astimezone(local_tz) if modified else None
 
         # site storage to access Drives and DriveItems
-        self.site_storage = Storage(parent=self,
-                                    main_resource='/sites/{id}'.format(
-                                        id=self.object_id))
+        self.site_storage = Storage(
+            parent=self, main_resource="/sites/{id}".format(id=self.object_id)
+        )
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'Site: {}'.format(self.name)
+        return "Site: {}".format(self.name)
 
     def __eq__(self, other):
         return self.object_id == other.object_id
 
     def get_default_document_library(self, request_drive=False):
-        """ Returns the default document library of this site (Drive instance)
+        """Returns the default document library of this site (Drive instance)
 
         :param request_drive: True will make an api call to retrieve
          the drive data
@@ -480,7 +563,7 @@ class Site(ApiComponent):
         return self.site_storage.get_default_drive(request_drive=request_drive)
 
     def get_document_library(self, drive_id):
-        """ Returns a Document Library (a Drive instance)
+        """Returns a Document Library (a Drive instance)
 
         :param drive_id: the drive_id to be retrieved.
         :rtype: Drive
@@ -488,7 +571,7 @@ class Site(ApiComponent):
         return self.site_storage.get_drive(drive_id=drive_id)
 
     def list_document_libraries(self):
-        """ Returns a collection of document libraries for this site
+        """Returns a collection of document libraries for this site
         (a collection of Drive instances)
         :return: list of items in this folder
         :rtype: list[Drive] or Pagination
@@ -496,12 +579,13 @@ class Site(ApiComponent):
         return self.site_storage.get_drives()
 
     def get_subsites(self):
-        """ Returns a list of subsites defined for this site
+        """Returns a list of subsites defined for this site
 
         :rtype: list[Site]
         """
         url = self.build_url(
-            self._endpoints.get('get_subsites').format(id=self.object_id))
+            self._endpoints.get("get_subsites").format(id=self.object_id)
+        )
 
         response = self.con.get(url)
         if not response:
@@ -510,15 +594,17 @@ class Site(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return [self.__class__(parent=self, **{self._cloud_data_key: site}) for
-                site in data.get('value', [])]
+        return [
+            self.__class__(parent=self, **{self._cloud_data_key: site})
+            for site in data.get("value", [])
+        ]
 
     def get_lists(self):
-        """ Returns a collection of lists within this site
+        """Returns a collection of lists within this site
 
         :rtype: list[SharepointList]
         """
-        url = self.build_url(self._endpoints.get('get_lists'))
+        url = self.build_url(self._endpoints.get("get_lists"))
 
         response = self.con.get(url)
         if not response:
@@ -526,7 +612,10 @@ class Site(ApiComponent):
 
         data = response.json()
 
-        return [self.list_constructor(parent=self, **{self._cloud_data_key: lst}) for lst in data.get('value', [])]
+        return [
+            self.list_constructor(parent=self, **{self._cloud_data_key: lst})
+            for lst in data.get("value", [])
+        ]
 
     def get_list_by_name(self, display_name):
         """
@@ -534,9 +623,11 @@ class Site(ApiComponent):
         """
 
         if not display_name:
-            raise ValueError('Must provide a valid list display name')
+            raise ValueError("Must provide a valid list display name")
 
-        url = self.build_url(self._endpoints.get('get_list_by_name').format(display_name=display_name))
+        url = self.build_url(
+            self._endpoints.get("get_list_by_name").format(display_name=display_name)
+        )
 
         response = self.con.get(url)
         if not response:
@@ -553,7 +644,7 @@ class Site(ApiComponent):
         :type list_data: Dict
         :rtype: list[SharepointList]
         """
-        url = self.build_url(self._endpoints.get('get_lists'))
+        url = self.build_url(self._endpoints.get("get_lists"))
         response = self.con.post(url, data=list_data)
 
         if not response:
@@ -564,16 +655,13 @@ class Site(ApiComponent):
 
 
 class Sharepoint(ApiComponent):
-    """ A Sharepoint parent class to group functionality """
+    """A Sharepoint parent class to group functionality"""
 
-    _endpoints = {
-        'get_site': '/sites/{id}',
-        'search': '/sites?search={keyword}'
-    }
+    _endpoints = {"get_site": "/sites/{id}", "search": "/sites?search={keyword}"}
     site_constructor = Site
 
     def __init__(self, *, parent=None, con=None, **kwargs):
-        """ A Sharepoint site List
+        """A Sharepoint site List
 
         :param parent: parent object
         :type parent: Account
@@ -584,33 +672,34 @@ class Sharepoint(ApiComponent):
          (kwargs)
         """
         if parent and con:
-            raise ValueError('Need a parent or a connection but not both')
+            raise ValueError("Need a parent or a connection but not both")
         self.con = parent.con if parent else con
 
         # Choose the main_resource passed in kwargs over the host_name
-        main_resource = kwargs.pop('main_resource',
-                                   '')  # defaults to blank resource
+        main_resource = kwargs.pop("main_resource", "")  # defaults to blank resource
         super().__init__(
-            protocol=parent.protocol if parent else kwargs.get('protocol'),
-            main_resource=main_resource)
+            protocol=parent.protocol if parent else kwargs.get("protocol"),
+            main_resource=main_resource,
+        )
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'Sharepoint'
+        return "Sharepoint"
 
     def search_site(self, keyword):
-        """ Search a sharepoint host for sites with the provided keyword
+        """Search a sharepoint host for sites with the provided keyword
 
         :param keyword: a keyword to search sites
         :rtype: list[Site]
         """
         if not keyword:
-            raise ValueError('Must provide a valid keyword')
+            raise ValueError("Must provide a valid keyword")
 
         next_link = self.build_url(
-            self._endpoints.get('search').format(keyword=keyword))
+            self._endpoints.get("search").format(keyword=keyword)
+        )
 
         sites = []
         while next_link:
@@ -623,22 +712,22 @@ class Sharepoint(ApiComponent):
             # Everything received from cloud must be passed as self._cloud_data_key
             sites += [
                 self.site_constructor(parent=self, **{self._cloud_data_key: site})
-                for site in data.get('value', [])
+                for site in data.get("value", [])
             ]
 
             next_link = data.get("@odata.nextLink")
-        
+
         return sites
 
     def get_root_site(self):
-        """ Returns the root site
+        """Returns the root site
 
         :rtype: Site
         """
-        return self.get_site('root')
+        return self.get_site("root")
 
     def get_site(self, *args):
-        """ Returns a sharepoint site
+        """Returns a sharepoint site
 
         :param args: It accepts multiple ways of retrieving a site:
 
@@ -660,15 +749,16 @@ class Sharepoint(ApiComponent):
             site = args[0]
         elif num_args == 2:
             host_name, path_to_site = args
-            path_to_site = '/' + path_to_site if not path_to_site.startswith(
-                '/') else path_to_site
-            site = '{}:{}:'.format(host_name, path_to_site)
+            path_to_site = (
+                "/" + path_to_site if not path_to_site.startswith("/") else path_to_site
+            )
+            site = "{}:{}:".format(host_name, path_to_site)
         elif num_args == 3:
-            site = ','.join(args)
+            site = ",".join(args)
         else:
-            raise ValueError('Incorrect number of arguments')
+            raise ValueError("Incorrect number of arguments")
 
-        url = self.build_url(self._endpoints.get('get_site').format(id=site))
+        url = self.build_url(self._endpoints.get("get_site").format(id=site))
 
         response = self.con.get(url)
         if not response:
@@ -676,5 +766,4 @@ class Sharepoint(ApiComponent):
 
         data = response.json()
 
-        return self.site_constructor(parent=self,
-                                     **{self._cloud_data_key: data})
+        return self.site_constructor(parent=self, **{self._cloud_data_key: data})

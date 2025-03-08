@@ -58,6 +58,9 @@ class AutomaticRepliesSettings(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+
+        self.update_raw_cloud_data(cloud_data)
         self.__external_audience = ExternalAudience(
             cloud_data.get(self._cc("externalAudience"), "")
         )
@@ -200,6 +203,9 @@ class MailboxSettings(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+
+        self.update_raw_cloud_data(cloud_data)
         autorepliessettings = cloud_data.get("automaticRepliesSetting")
         self.automaticrepliessettings = self.autoreply_constructor(
             parent=self, **{self._cloud_data_key: autorepliessettings}
@@ -289,6 +295,9 @@ class Folder(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
+
+
+        self.update_raw_cloud_data(cloud_data)
 
         # Fallback to manual folder if nothing available on cloud data
         self.name = cloud_data.get(self._cc("displayName"), kwargs.get("name", ""))
