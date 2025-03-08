@@ -2,10 +2,45 @@ import datetime as dt
 import logging
 from collections import OrderedDict
 from enum import Enum
-from typing import Dict, Union
+from typing import Dict, Union, Optional, TypeVar, Generic, Iterable
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dateutil.parser import parse
+
+
+from tqdm import tqdm
+
+
+
+    # Define a simple progress bar replacement if tqdm is not available
+    T = TypeVar('T')
+    class tqdm(Generic[T]):
+        def __init__(self, iterable: Optional[Iterable[T]] = None, **kwargs):
+            self.iterable = iterable
+            self.total = kwargs.get('total', None)
+            self.current = 0
+            self.it = None
+            
+        def __iter__(self) -> 'tqdm[T]':
+            if self.iterable is not None:
+                self.it = iter(self.iterable)
+            return self
+            
+        def __next__(self) -> T:
+            if self.it is None:
+                raise StopIteration
+            try:
+                item = next(self.it)
+                self.current += 1
+                return item
+            except StopIteration:
+                raise
+                
+        def update(self, n: int = 1) -> None:
+            self.current += n
+            
+        def close(self) -> None:
+            pass
 
 from .casing import to_snake_case
 from .decorators import fluent
@@ -611,39 +646,47 @@ class Pagination(ApiComponent):
         constructor=None,
         next_link=None,
         limit=None,
-        **kwargs,
+        batch=None,
+        show_progress=False,
+        progress_unit="object",
+        **kwargs
     ):
         """Returns an iterator that returns data until it's exhausted.
         Then will request more data (same amount as the original request)
-        to the server until this data is exhausted as well.
-        Stops when no more data exists or limit is reached.
+        and start returning with new data.
 
-        :param parent: the parent class. Must implement attributes:
-         con, api_version, main_resource
-        :param data: the start data to be return
-        :param constructor: the data constructor for the next batch.
+        :param parent: the parent of this operation
+        :type parent: ApiComponent
+        :param list data: the initial data to be returned
+        :param constructor: a function or callable that gets
+         initialized with parent and kwargs
          It can be a function.
         :param str next_link: the link to request more data to
         :param int limit: when to stop retrieving more data
+        :param batch: the number of items to retrieve per batch.
+        :param show_progress: whether to show a progress bar or not
         :param kwargs: any extra key-word arguments to pass to the
          construtctor.
         """
         if parent is None:
             raise ValueError("Parent must be another Api Component")
 
-        super().__init__(protocol=parent.protocol, main_resource=parent.main_resource)
-
+        super().__init__(protocol=parent.protocol, **kwargs)
         self.parent = parent
         self.con = parent.con
         self.constructor = constructor
         self.next_link = next_link
         self.limit = limit
-        self.data = data = list(data) if data else []
+        self.batch = batch
         
         # Store the raw response text using the parent's update method
         raw_response_text = kwargs.get('raw_response_text', '')
         self.update_raw_response_text(raw_response_text)
-
+        
+        # Process initial data
+        self.data = data = list(data) if data else []
+        
+        # Calculate data count and handle limit
         data_count = len(data)
         if limit and limit < data_count:
             self.data_count = limit
@@ -651,8 +694,12 @@ class Pagination(ApiComponent):
         else:
             self.data_count = data_count
             self.total_count = data_count
+        
         self.state = 0
-        self.extra_args = kwargs
+        self.show_progress = show_progress
+        self.progress_bar = None
+        self.progress_unit = progress_unit
+        self.extra_args = kwargs  # Store extra args for use during constructor calls
 
     def __str__(self):
         return self.__repr__()
@@ -669,22 +716,35 @@ class Pagination(ApiComponent):
         return bool(self.data) or bool(self.next_link)
 
     def __iter__(self):
+        self.state = 0
+        self.total_count = 0
         return self
 
     def __next__(self):
         if self.state < self.data_count:
             value = self.data[self.state]
             self.state += 1
+            
+            # Update progress bar if it exists
+            if self.progress_bar:
+                self.progress_bar.update(1)
+            
             return value
         else:
             if self.limit and self.total_count >= self.limit:
+                if self.progress_bar:
+                    self.progress_bar.close()
                 raise StopIteration()
 
         if self.next_link is None:
+            if self.progress_bar:
+                self.progress_bar.close()
             raise StopIteration()
 
         response = self.con.get(self.next_link)
         if not response:
+            if self.progress_bar:
+                self.progress_bar.close()
             raise StopIteration()
 
         data = response.json()
@@ -693,26 +753,53 @@ class Pagination(ApiComponent):
 
         self.next_link = data.get(NEXT_LINK_KEYWORD, None) or None
         data = data.get("value", [])
+        
+        # Handle progress bar for batch data
+        if self.show_progress and data:
+            # If this is the first time, create a progress bar
+            total_items = len(data)
+            if self.limit:
+                total_items = min(self.limit - self.total_count, total_items)
+            
+            if not self.progress_bar:
+                self.progress_bar = tqdm(
+                    desc=f"Fetching {self.progress_unit} (batch)",
+                    unit=self.progress_unit,
+                    total=self.limit if self.limit else None
+                )
+                # Update with items we've already processed
+                self.progress_bar.update(self.total_count)
+        
         if self.constructor:
-            # Everything  from cloud must be passed as self._cloud_data_key
-            self.data = []
+            # Everything from cloud must be passed as self._cloud_data_key
             kwargs = {}
             kwargs.update(self.extra_args)
             # Add raw response text to kwargs
             kwargs['raw_response_text'] = raw_text
+            
+            # Reset data list for new items
+            self.data = []
+            
+            # Handle different constructor patterns
             if callable(self.constructor) and not isinstance(self.constructor, type):
                 for value in data:
                     kwargs[self._cloud_data_key] = value
-                    self.data.append(
-                        self.constructor(value)(parent=self.parent, **kwargs)
-                    )
+                    # The constructor is a function that returns a class constructor
+                    constructed_type = self.constructor(value)
+                    # Make sure constructed_type is callable before trying to call it
+                    if callable(constructed_type):
+                        self.data.append(constructed_type(parent=self.parent, **kwargs))
+                    else:
+                        # Fallback to just using the constructed_type as is
+                        self.data.append(constructed_type)
             else:
                 for value in data:
                     kwargs[self._cloud_data_key] = value
                     self.data.append(self.constructor(parent=self.parent, **kwargs))
         else:
-            self.data = data
-
+            self.data = list(data)
+        
+        # Apply limits if needed
         items_count = len(data)
         if self.limit:
             dif = self.limit - (self.total_count + items_count)
@@ -720,14 +807,23 @@ class Pagination(ApiComponent):
                 self.data = self.data[:dif]
                 self.next_link = None  # stop batching
                 items_count = items_count + dif
+        
         if items_count:
             self.data_count = items_count
             self.total_count += items_count
             self.state = 0
+            
             value = self.data[self.state]
             self.state += 1
+            
+            # Update progress bar if it exists
+            if self.progress_bar:
+                self.progress_bar.update(1)
+                
             return value
         else:
+            if self.progress_bar:
+                self.progress_bar.close()
             raise StopIteration()
 
 

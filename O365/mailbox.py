@@ -2,6 +2,8 @@ import datetime as dt
 import logging
 from enum import Enum
 
+from tqdm import tqdm
+
 from .message import Message
 from .utils import (
     NEXT_LINK_KEYWORD,
@@ -58,7 +60,6 @@ class AutomaticRepliesSettings(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
-
 
         self.update_raw_cloud_data(cloud_data)
         self.__external_audience = ExternalAudience(
@@ -204,14 +205,13 @@ class MailboxSettings(ApiComponent):
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
 
-
         self.update_raw_cloud_data(cloud_data)
         autorepliessettings = cloud_data.get("automaticRepliesSetting")
         self.automaticrepliessettings = self.autoreply_constructor(
             parent=self, **{self._cloud_data_key: autorepliessettings}
         )
-        self.timezone = cloud_data.get("timeZone") 
-        self.workinghours = cloud_data.get("workingHours") 
+        self.timezone = cloud_data.get("timeZone")
+        self.workinghours = cloud_data.get("workingHours")
 
     def __str__(self):
         """Representation of the MailboxSetting via the Graph api as a string."""
@@ -233,12 +233,12 @@ class MailboxSettings(ApiComponent):
             cc("externalReplyMessage"): ars.external_reply_message,
         }
         if ars.status == AutoReplyStatus.SCHEDULED:
-            automatic_reply_settings[
-                cc("scheduledStartDateTime")
-            ] = self._build_date_time_time_zone(ars.scheduled_startdatetime)
-            automatic_reply_settings[
-                cc("scheduledEndDateTime")
-            ] = self._build_date_time_time_zone(ars.scheduled_enddatetime)
+            automatic_reply_settings[cc("scheduledStartDateTime")] = (
+                self._build_date_time_time_zone(ars.scheduled_startdatetime)
+            )
+            automatic_reply_settings[cc("scheduledEndDateTime")] = (
+                self._build_date_time_time_zone(ars.scheduled_enddatetime)
+            )
 
         data = {cc("automaticRepliesSetting"): automatic_reply_settings}
 
@@ -295,7 +295,6 @@ class Folder(ApiComponent):
         )
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
-
 
         self.update_raw_cloud_data(cloud_data)
 
@@ -431,6 +430,7 @@ class Folder(ApiComponent):
         order_by=None,
         batch=None,
         download_attachments=False,
+        show_progress=False,
     ):
         """
         Downloads messages from this folder
@@ -444,6 +444,7 @@ class Folder(ApiComponent):
         :param int batch: batch size, retrieves items in
          batches allowing to retrieve more items than the limit.
         :param bool download_attachments: whether or not to download attachments
+        :param bool show_progress: whether to show a progress bar using tqdm
         :return: list of messages
         :rtype: list[Message] or Pagination
         """
@@ -476,6 +477,20 @@ class Folder(ApiComponent):
         data = response.json()
         raw_text = response.text  # Store the raw response text
 
+        # Get the messages from the response
+        messages_data = data.get("value", [])
+
+        # If we should show progress, wrap the messages in a tqdm progress bar
+        if show_progress and messages_data:
+            messages_iterator = tqdm(
+                messages_data,
+                desc="Fetching messages",
+                unit="msg",
+                total=min(limit, len(messages_data)) if limit else len(messages_data),
+            )
+        else:
+            messages_iterator = messages_data
+
         # Everything received from cloud must be passed as self._cloud_data_key
         messages = (
             self.message_constructor(
@@ -484,7 +499,7 @@ class Folder(ApiComponent):
                 raw_response_text=raw_text,  # Pass the raw response text
                 **{self._cloud_data_key: message},
             )
-            for message in data.get("value", [])
+            for message in messages_iterator
         )
 
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -497,9 +512,12 @@ class Folder(ApiComponent):
                 limit=limit,
                 download_attachments=download_attachments,
                 raw_response_text=raw_text,  # Pass the raw response text
+                show_progress=show_progress,  # Pass the progress flag
+                progress_unit="msg",  # Pass the progress unit
             )
         else:
-            return messages
+            # Convert generator to list if showing progress to ensure tqdm works correctly
+            return list(messages) if show_progress else messages
 
     def create_child_folder(self, folder_name):
         """Creates a new child folder under this folder
@@ -932,7 +950,7 @@ class MailBox(Folder):
     def clutter_folder(self):
         """Shortcut to get Clutter Folder instance
            The clutter folder low-priority messages are moved to when using the Clutter feature.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
@@ -944,7 +962,7 @@ class MailBox(Folder):
     def conflicts_folder(self):
         """Shortcut to get Conflicts Folder instance
            The folder that contains conflicting items in the mailbox.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
@@ -956,14 +974,14 @@ class MailBox(Folder):
     def conversationhistory_folder(self):
         """Shortcut to get Conversation History Folder instance
            The folder where Skype saves IM conversations (if Skype is configured to do so).
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
             parent=self,
             name="Conflicts",
             folder_id=OutlookWellKnowFolderNames.CONVERSATIONHISTORY.value,
-        )        
+        )
 
     def localfailures_folder(self):
         """Shortcut to get Local Failure Folder instance
@@ -975,12 +993,12 @@ class MailBox(Folder):
             parent=self,
             name="Local Failures",
             folder_id=OutlookWellKnowFolderNames.LOCALFAILURES.value,
-        )      
+        )
 
     def recoverableitemsdeletions_folder(self):
         """Shortcut to get Recoverable Items Deletions (Purges) Folder instance
-        The folder that contains soft-deleted items: deleted either from the Deleted Items folder, or by pressing shift+delete in Outlook. 
-        This folder is not visible in any Outlook email client, 
+        The folder that contains soft-deleted items: deleted either from the Deleted Items folder, or by pressing shift+delete in Outlook.
+        This folder is not visible in any Outlook email client,
         but end users can interact with it through the Recover Deleted Items from Server feature in Outlook or Outlook on the web.
 
         :rtype: mailbox.Folder
@@ -989,55 +1007,55 @@ class MailBox(Folder):
             parent=self,
             name="Recoverable Items Deletions (Purges)",
             folder_id=OutlookWellKnowFolderNames.RECOVERABLEITEMSDELETIONS.value,
-        )         
+        )
 
     def scheduled_folder(self):
         """Shortcut to get Scheduled Folder instance
         The folder that contains messages that are scheduled to reappear in the inbox using the Schedule feature in Outlook for iOS.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
             parent=self,
             name="Scheduled",
             folder_id=OutlookWellKnowFolderNames.SCHEDULED.value,
-        )         
-    
+        )
+
     def searchfolders_folder(self):
         """Shortcut to get Search Folders Folder instance
         The parent folder for all search folders defined in the user's mailbox.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
             parent=self,
             name="Search Folders",
             folder_id=OutlookWellKnowFolderNames.SEARCHFOLDERS.value,
-        )     
-    
+        )
+
     def serverfailures_folder(self):
         """Shortcut to get Server Failures Folder instance
         The folder that contains items that exist on the server but could not be synchronized to the local client.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
             parent=self,
             name="Server Failures",
             folder_id=OutlookWellKnowFolderNames.SERVERFAILURES.value,
-        )    
+        )
 
     def syncissues_folder(self):
         """Shortcut to get Sync Issues Folder instance
         The folder that contains synchronization logs created by Outlook.
-        
+
         :rtype: mailbox.Folder
         """
         return self.folder_constructor(
             parent=self,
             name="Sync Issues",
             folder_id=OutlookWellKnowFolderNames.SYNCISSUES.value,
-        )         
+        )
 
     def get_settings(self):
         """Return the MailboxSettings.
