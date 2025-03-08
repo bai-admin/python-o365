@@ -2,45 +2,44 @@ import datetime as dt
 import logging
 from collections import OrderedDict
 from enum import Enum
-from typing import Dict, Union, Optional, TypeVar, Generic, Iterable
+from typing import Dict, Generic, Iterable, Optional, TypeVar, Union
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dateutil.parser import parse
-
-
 from tqdm import tqdm
 
+# Define a simple progress bar replacement if tqdm is not available
+T = TypeVar("T")
 
 
-    # Define a simple progress bar replacement if tqdm is not available
-    T = TypeVar('T')
-    class tqdm(Generic[T]):
-        def __init__(self, iterable: Optional[Iterable[T]] = None, **kwargs):
-            self.iterable = iterable
-            self.total = kwargs.get('total', None)
-            self.current = 0
-            self.it = None
-            
-        def __iter__(self) -> 'tqdm[T]':
-            if self.iterable is not None:
-                self.it = iter(self.iterable)
-            return self
-            
-        def __next__(self) -> T:
-            if self.it is None:
-                raise StopIteration
-            try:
-                item = next(self.it)
-                self.current += 1
-                return item
-            except StopIteration:
-                raise
-                
-        def update(self, n: int = 1) -> None:
-            self.current += n
-            
-        def close(self) -> None:
-            pass
+class tqdm(Generic[T]):
+    def __init__(self, iterable: Optional[Iterable[T]] = None, **kwargs):
+        self.iterable = iterable
+        self.total = kwargs.get("total", None)
+        self.current = 0
+        self.it = None
+
+    def __iter__(self) -> "tqdm[T]":
+        if self.iterable is not None:
+            self.it = iter(self.iterable)
+        return self
+
+    def __next__(self) -> T:
+        if self.it is None:
+            raise StopIteration
+        try:
+            item = next(self.it)
+            self.current += 1
+            return item
+        except StopIteration:
+            raise
+
+    def update(self, n: int = 1) -> None:
+        self.current += n
+
+    def close(self) -> None:
+        pass
+
 
 from .casing import to_snake_case
 from .decorators import fluent
@@ -389,7 +388,7 @@ class ApiComponent:
 
         # Store the original cloud data
         self.__raw_cloud_data = {}
-        
+
         # Store the raw response text
         self.__raw_response_text = ""
 
@@ -649,7 +648,7 @@ class Pagination(ApiComponent):
         batch=None,
         show_progress=False,
         progress_unit="object",
-        **kwargs
+        **kwargs,
     ):
         """Returns an iterator that returns data until it's exhausted.
         Then will request more data (same amount as the original request)
@@ -678,14 +677,14 @@ class Pagination(ApiComponent):
         self.next_link = next_link
         self.limit = limit
         self.batch = batch
-        
+
         # Store the raw response text using the parent's update method
-        raw_response_text = kwargs.get('raw_response_text', '')
+        raw_response_text = kwargs.get("raw_response_text", "")
         self.update_raw_response_text(raw_response_text)
-        
+
         # Process initial data
         self.data = data = list(data) if data else []
-        
+
         # Calculate data count and handle limit
         data_count = len(data)
         if limit and limit < data_count:
@@ -694,7 +693,7 @@ class Pagination(ApiComponent):
         else:
             self.data_count = data_count
             self.total_count = data_count
-        
+
         self.state = 0
         self.show_progress = show_progress
         self.progress_bar = None
@@ -724,11 +723,11 @@ class Pagination(ApiComponent):
         if self.state < self.data_count:
             value = self.data[self.state]
             self.state += 1
-            
+
             # Update progress bar if it exists
             if self.progress_bar:
                 self.progress_bar.update(1)
-            
+
             return value
         else:
             if self.limit and self.total_count >= self.limit:
@@ -753,33 +752,33 @@ class Pagination(ApiComponent):
 
         self.next_link = data.get(NEXT_LINK_KEYWORD, None) or None
         data = data.get("value", [])
-        
+
         # Handle progress bar for batch data
         if self.show_progress and data:
             # If this is the first time, create a progress bar
             total_items = len(data)
             if self.limit:
                 total_items = min(self.limit - self.total_count, total_items)
-            
+
             if not self.progress_bar:
                 self.progress_bar = tqdm(
                     desc=f"Fetching {self.progress_unit} (batch)",
                     unit=self.progress_unit,
-                    total=self.limit if self.limit else None
+                    total=self.limit if self.limit else None,
                 )
                 # Update with items we've already processed
                 self.progress_bar.update(self.total_count)
-        
+
         if self.constructor:
             # Everything from cloud must be passed as self._cloud_data_key
             kwargs = {}
             kwargs.update(self.extra_args)
             # Add raw response text to kwargs
-            kwargs['raw_response_text'] = raw_text
-            
+            kwargs["raw_response_text"] = raw_text
+
             # Reset data list for new items
             self.data = []
-            
+
             # Handle different constructor patterns
             if callable(self.constructor) and not isinstance(self.constructor, type):
                 for value in data:
@@ -798,7 +797,7 @@ class Pagination(ApiComponent):
                     self.data.append(self.constructor(parent=self.parent, **kwargs))
         else:
             self.data = list(data)
-        
+
         # Apply limits if needed
         items_count = len(data)
         if self.limit:
@@ -807,19 +806,19 @@ class Pagination(ApiComponent):
                 self.data = self.data[:dif]
                 self.next_link = None  # stop batching
                 items_count = items_count + dif
-        
+
         if items_count:
             self.data_count = items_count
             self.total_count += items_count
             self.state = 0
-            
+
             value = self.data[self.state]
             self.state += 1
-            
+
             # Update progress bar if it exists
             if self.progress_bar:
                 self.progress_bar.update(1)
-                
+
             return value
         else:
             if self.progress_bar:
