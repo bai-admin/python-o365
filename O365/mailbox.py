@@ -410,6 +410,7 @@ class Folder(ApiComponent):
             return self.message_constructor(
                 parent=self,
                 download_attachments=download_attachments,
+                raw_response_text=response.text,  # Pass the raw response text
                 **{self._cloud_data_key: message},
             )
 
@@ -473,12 +474,14 @@ class Folder(ApiComponent):
             return iter(())
 
         data = response.json()
+        raw_text = response.text  # Store the raw response text
 
         # Everything received from cloud must be passed as self._cloud_data_key
         messages = (
             self.message_constructor(
                 parent=self,
                 download_attachments=download_attachments,
+                raw_response_text=raw_text,  # Pass the raw response text
                 **{self._cloud_data_key: message},
             )
             for message in data.get("value", [])
@@ -493,6 +496,7 @@ class Folder(ApiComponent):
                 next_link=next_link,
                 limit=limit,
                 download_attachments=download_attachments,
+                raw_response_text=raw_text,  # Pass the raw response text
             )
         else:
             return messages
@@ -1053,4 +1057,3 @@ class MailBox(Folder):
         return self.mailbox_settings_constructor(
             parent=self, **{self._cloud_data_key: data}
         )
-

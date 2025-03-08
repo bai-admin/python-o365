@@ -354,6 +354,9 @@ class ApiComponent:
 
         # Store the original cloud data
         self.__raw_cloud_data = {}
+        
+        # Store the raw response text
+        self.__raw_response_text = ""
 
         super().__init__()
 
@@ -373,6 +376,16 @@ class ApiComponent:
         """
         return self.__raw_cloud_data
 
+    @property
+    def raw_response_text(self):
+        """
+        Returns the original raw response text from the Graph API
+
+        :return: The raw JSON string from the API response
+        :rtype: str
+        """
+        return self.__raw_response_text
+
     def update_raw_cloud_data(self, cloud_data):
         """
         Updates the stored raw cloud data
@@ -380,6 +393,14 @@ class ApiComponent:
         :param dict cloud_data: The cloud data to store
         """
         self.__raw_cloud_data = cloud_data.copy() if cloud_data else {}
+
+    def update_raw_response_text(self, response_text):
+        """
+        Updates the stored raw response text
+
+        :param str response_text: The raw response text to store
+        """
+        self.__raw_response_text = response_text if response_text else ""
 
     def get_raw_value(self, key, default=None):
         """
@@ -618,6 +639,10 @@ class Pagination(ApiComponent):
         self.next_link = next_link
         self.limit = limit
         self.data = data = list(data) if data else []
+        
+        # Store the raw response text using the parent's update method
+        raw_response_text = kwargs.get('raw_response_text', '')
+        self.update_raw_response_text(raw_response_text)
 
         data_count = len(data)
         if limit and limit < data_count:
@@ -663,6 +688,8 @@ class Pagination(ApiComponent):
             raise StopIteration()
 
         data = response.json()
+        raw_text = response.text  # Store the raw response text
+        self.update_raw_response_text(raw_text)  # Use the update method
 
         self.next_link = data.get(NEXT_LINK_KEYWORD, None) or None
         data = data.get("value", [])
@@ -671,6 +698,8 @@ class Pagination(ApiComponent):
             self.data = []
             kwargs = {}
             kwargs.update(self.extra_args)
+            # Add raw response text to kwargs
+            kwargs['raw_response_text'] = raw_text
             if callable(self.constructor) and not isinstance(self.constructor, type):
                 for value in data:
                     kwargs[self._cloud_data_key] = value

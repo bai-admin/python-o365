@@ -287,6 +287,10 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         )
 
         download_attachments = kwargs.get("download_attachments")
+        
+        # Get and store the raw response text
+        raw_response_text = kwargs.pop("raw_response_text", "")
+        self.update_raw_response_text(raw_response_text)
 
         cloud_data = kwargs.get(self._cloud_data_key, {})
         self.update_raw_cloud_data(cloud_data)
@@ -1001,7 +1005,9 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         if isinstance(folder, str):
             folder_id = folder
         else:
-            folder_id = getattr(folder, "folder_id", None)
+            folder_id = getattr(
+                folder, "folder_id", OutlookWellKnowFolderNames.DRAFTS.value
+            )
 
         if not folder_id:
             raise RuntimeError("Must Provide a valid folder_id")
