@@ -535,7 +535,7 @@ class Bucket(ApiComponent):
         data = response.json()
 
         return [
-            self.task_constructor(parent=self, **{self._cloud_data_key: task})
+            self.task_constructor(parent=self, raw_response_text=json.dumps(task), **{self._cloud_data_key: task})
             for task in data.get("value", [])
         ]
 
@@ -623,7 +623,7 @@ class Bucket(ApiComponent):
 
         task = response.json()
 
-        return self.task_constructor(parent=self, **{self._cloud_data_key: task})
+        return self.task_constructor(parent=self, raw_response_text=json.dumps(task), **{self._cloud_data_key: task})
 
     def update(self, **kwargs):
         """Updates this bucket
@@ -767,7 +767,7 @@ class Plan(ApiComponent):
         data = response.json()
 
         return [
-            self.bucket_constructor(parent=self, **{self._cloud_data_key: bucket})
+            self.bucket_constructor(parent=self, raw_response_text=json.dumps(bucket), **{self._cloud_data_key: bucket})
             for bucket in data.get("value", [])
         ]
 
@@ -865,7 +865,7 @@ class Plan(ApiComponent):
 
         bucket = response.json()
 
-        return self.bucket_constructor(parent=self, **{self._cloud_data_key: bucket})
+        return self.bucket_constructor(parent=self, raw_response_text=json.dumps(bucket), **{self._cloud_data_key: bucket})
 
     def update(self, **kwargs):
         """Updates this plan
@@ -988,7 +988,7 @@ class Planner(ApiComponent):
         data = response.json()
 
         return [
-            self.task_constructor(parent=self, **{self._cloud_data_key: site})
+            self.task_constructor(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
             for site in data.get("value", [])
         ]
 
@@ -1042,7 +1042,7 @@ class Planner(ApiComponent):
 
         data = response.json()
 
-        return self.bucket_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.bucket_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_task_by_id(self, task_id=None):
         """Returns Microsoft O365/AD plan with given id
@@ -1066,7 +1066,7 @@ class Planner(ApiComponent):
 
         data = response.json()
 
-        return self.task_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.task_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def list_user_tasks(self, user_id=None):
         """Returns Microsoft O365/AD plan with given id
@@ -1091,7 +1091,7 @@ class Planner(ApiComponent):
         data = response.json()
 
         return [
-            self.task_constructor(parent=self, **{self._cloud_data_key: task})
+            self.task_constructor(parent=self, raw_response_text=json.dumps(task), **{self._cloud_data_key: task})
             for task in data.get("value", [])
         ]
 
@@ -1116,7 +1116,7 @@ class Planner(ApiComponent):
         data = response.json()
 
         return [
-            self.plan_constructor(parent=self, **{self._cloud_data_key: plan})
+            self.plan_constructor(parent=self, raw_response_text=json.dumps(plan), **{self._cloud_data_key: plan})
             for plan in data.get("value", [])
         ]
 
@@ -1141,4 +1141,4 @@ class Planner(ApiComponent):
 
         plan = response.json()
 
-        return self.plan_constructor(parent=self, **{self._cloud_data_key: plan})
+        return self.plan_constructor(parent=self, raw_response_text=json.dumps(plan), **{self._cloud_data_key: plan})

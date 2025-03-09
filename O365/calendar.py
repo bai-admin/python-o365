@@ -1977,7 +1977,7 @@ class Calendar(ApiComponent, HandleRecipientsMixin):
                 event = event[0]
             else:
                 return None
-        return self.event_constructor(parent=self, **{self._cloud_data_key: event})
+        return self.event_constructor(parent=self, raw_response_text=json.dumps(event), **{self._cloud_data_key: event})
 
 
 class Schedule(ApiComponent):
@@ -2057,7 +2057,7 @@ class Schedule(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         contacts = [
-            self.calendar_constructor(parent=self, **{self._cloud_data_key: x})
+            self.calendar_constructor(parent=self, raw_response_text=json.dumps(x), **{self._cloud_data_key: x})
             for x in data.get("value", [])
         ]
 
@@ -2082,7 +2082,7 @@ class Schedule(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.calendar_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.calendar_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_calendar(self, calendar_id=None, calendar_name=None):
         """Returns a calendar by it's id or name
@@ -2125,7 +2125,7 @@ class Schedule(ApiComponent):
                 return None
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.calendar_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.calendar_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_default_calendar(self):
         """Returns the default calendar for the current user
@@ -2142,7 +2142,7 @@ class Schedule(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.calendar_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.calendar_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_events(
         self,

@@ -862,7 +862,7 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         message = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.__class__(parent=self, **{self._cloud_data_key: message})
+        return self.__class__(parent=self, raw_response_text=json.dumps(message), **{self._cloud_data_key: message})
 
     def forward(self):
         """Creates a new message that is a forward this message
@@ -884,7 +884,7 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         message = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.__class__(parent=self, **{self._cloud_data_key: message})
+        return self.__class__(parent=self, raw_response_text=json.dumps(message), **{self._cloud_data_key: message})
 
     def delete(self):
         """Deletes a stored message
@@ -1021,7 +1021,7 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         message = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.__class__(parent=self, **{self._cloud_data_key: message})
+        return self.__class__(parent=self, raw_response_text=json.dumps(message), **{self._cloud_data_key: message})
 
     def save_message(self):
         """Saves changes to a message.
@@ -1202,7 +1202,7 @@ class Message(ApiComponent, AttachableMixin, HandleRecipientsMixin):
         data = response.json()
         event_data = data.get(self._cc("event"))
 
-        return Event(parent=self, **{self._cloud_data_key: event_data})
+        return Event(parent=self, raw_response_text=json.dumps(event_data), **{self._cloud_data_key: event_data})
 
     def get_mime_content(self):
         """Returns the MIME contents of this message"""

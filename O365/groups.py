@@ -84,12 +84,12 @@ class Group(ApiComponent):
                     )
                     recursive_data.extend(recursive_members)
             return [
-                self.member_constructor(parent=self, **{self._cloud_data_key: lst})
+                self.member_constructor(parent=self, raw_response_text=json.dumps(lst), **{self._cloud_data_key: lst})
                 for lst in recursive_data
             ]
         else:
             return [
-                self.member_constructor(parent=self, **{self._cloud_data_key: lst})
+                self.member_constructor(parent=self, raw_response_text=json.dumps(lst), **{self._cloud_data_key: lst})
                 for lst in self._get_group_members_raw()
             ]
 
@@ -121,7 +121,7 @@ class Group(ApiComponent):
         data = response.json()
 
         return [
-            self.member_constructor(parent=self, **{self._cloud_data_key: lst})
+            self.member_constructor(parent=self, raw_response_text=json.dumps(lst), **{self._cloud_data_key: lst})
             for lst in data.get("value", [])
         ]
 
@@ -193,7 +193,7 @@ class Groups(ApiComponent):
 
         data = response.json()
 
-        return self.group_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.group_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_group_by_mail(self, group_mail=None):
         """Returns Microsoft O365/AD group by mail field
@@ -251,7 +251,7 @@ class Groups(ApiComponent):
         data = response.json()
 
         return [
-            self.group_constructor(parent=self, **{self._cloud_data_key: group})
+            self.group_constructor(parent=self, raw_response_text=json.dumps(group), **{self._cloud_data_key: group})
             for group in data.get("value", [])
         ]
 
@@ -270,6 +270,6 @@ class Groups(ApiComponent):
         data = response.json()
 
         return [
-            self.group_constructor(parent=self, **{self._cloud_data_key: group})
+            self.group_constructor(parent=self, raw_response_text=json.dumps(group), **{self._cloud_data_key: group})
             for group in data.get("value", [])
         ]

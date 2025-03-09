@@ -367,7 +367,7 @@ class Folder(ApiComponent):
         # Everything received from cloud must be passed as self._cloud_data_key
         self_class = getattr(self, "folder_constructor", type(self))
         folders = [
-            self_class(parent=self, **{self._cloud_data_key: folder})
+            self_class(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
             for folder in data.get("value", [])
         ]
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -548,7 +548,7 @@ class Folder(ApiComponent):
 
         self_class = getattr(self, "folder_constructor", type(self))
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self_class(parent=self, **{self._cloud_data_key: folder})
+        return self_class(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
 
     def get_folder(self, *, folder_id=None, folder_name=None):
         """Get a folder by it's id or name

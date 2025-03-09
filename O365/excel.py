@@ -680,7 +680,7 @@ class Range(ApiComponent):
             response = self.session.post(url, data=kwargs)
         if not response:
             return None
-        return self.__class__(parent=self, **{self._cloud_data_key: response.json()})
+        return self.__class__(parent=self, raw_response_text=json.dumps(response.json()), **{self._cloud_data_key: response.json()})
 
     def get_cell(self, row, column):
         """
@@ -880,7 +880,7 @@ class Range(ApiComponent):
         ws = data.get("worksheet")
         if ws is None:
             return None
-        return WorkSheet(session=self.session, **{self._cloud_data_key: ws})
+        return WorkSheet(session=self.session, raw_response_text=json.dumps(ws), **{self._cloud_data_key: ws})
 
     def get_format(self):
         """Returns a RangeFormat instance with the format of this range"""
@@ -1275,7 +1275,7 @@ class Table(ApiComponent):
         data = response.json()
 
         return (
-            self.column_constructor(parent=self, **{self._cloud_data_key: column})
+            self.column_constructor(parent=self, raw_response_text=json.dumps(column), **{self._cloud_data_key: column})
             for column in data.get("value", [])
         )
 
@@ -1295,7 +1295,7 @@ class Table(ApiComponent):
 
         data = response.json()
 
-        return self.column_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.column_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_column_at_index(self, index):
         """
@@ -1347,7 +1347,7 @@ class Table(ApiComponent):
 
         data = response.json()
 
-        return self.column_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.column_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_rows(self, *, top=None, skip=None):
         """
@@ -1372,7 +1372,7 @@ class Table(ApiComponent):
         data = response.json()
 
         return (
-            self.row_constructor(parent=self, **{self._cloud_data_key: row})
+            self.row_constructor(parent=self, raw_response_text=json.dumps(row), **{self._cloud_data_key: row})
             for row in data.get("value", [])
         )
 
@@ -1496,7 +1496,7 @@ class Table(ApiComponent):
         if not response:
             return None
         data = response.json()
-        return self.range_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.range_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_data_body_range(self):
         """Gets the range object associated with the data body of the table"""
@@ -1540,7 +1540,7 @@ class Table(ApiComponent):
         ws = data.get("worksheet")
         if ws is None:
             return None
-        return WorkSheet(parent=self.parent, **{self._cloud_data_key: ws})
+        return WorkSheet(parent=self.parent, raw_response_text=json.dumps(ws), **{self._cloud_data_key: ws})
 
 
 class WorkSheet(ApiComponent):
@@ -1643,7 +1643,7 @@ class WorkSheet(ApiComponent):
         data = response.json()
 
         return [
-            self.table_constructor(parent=self, **{self._cloud_data_key: table})
+            self.table_constructor(parent=self, raw_response_text=json.dumps(table), **{self._cloud_data_key: table})
             for table in data.get("value", [])
         ]
 
@@ -1909,7 +1909,7 @@ class WorkBook(ApiComponent):
         data = response.json()
 
         return [
-            self.table_constructor(parent=self, **{self._cloud_data_key: table})
+            self.table_constructor(parent=self, raw_response_text=json.dumps(table), **{self._cloud_data_key: table})
             for table in data.get("value", [])
         ]
 
@@ -1942,7 +1942,7 @@ class WorkBook(ApiComponent):
         data = response.json()
 
         return [
-            self.worksheet_constructor(parent=self, **{self._cloud_data_key: ws})
+            self.worksheet_constructor(parent=self, raw_response_text=json.dumps(ws), **{self._cloud_data_key: ws})
             for ws in data.get("value", [])
         ]
 
@@ -1965,7 +1965,7 @@ class WorkBook(ApiComponent):
         if not response:
             return None
         data = response.json()
-        return self.worksheet_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.worksheet_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def delete_worksheet(self, worksheet_id):
         """Deletes a worksheet by it's id"""
@@ -1997,7 +1997,7 @@ class WorkBook(ApiComponent):
             return []
         data = response.json()
         return [
-            self.named_range_constructor(parent=self, **{self._cloud_data_key: nr})
+            self.named_range_constructor(parent=self, raw_response_text=json.dumps(nr), **{self._cloud_data_key: nr})
             for nr in data.get("value", [])
         ]
 

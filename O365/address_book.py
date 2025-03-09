@@ -908,7 +908,7 @@ class ContactFolder(BaseContactFolder):
         data = response.json()
 
         return [
-            self.__class__(parent=self, **{self._cloud_data_key: folder})
+            self.__class__(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
             for folder in data.get("value", [])
         ]
 
@@ -937,7 +937,7 @@ class ContactFolder(BaseContactFolder):
         folder = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.__class__(parent=self, **{self._cloud_data_key: folder})
+        return self.__class__(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
 
     def update_folder_name(self, name):
         """Change this folder name

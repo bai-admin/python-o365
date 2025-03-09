@@ -341,7 +341,7 @@ class Directory(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.user_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.user_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_user(self, user, query=None):
         """Returns a User by it's id or user principal name

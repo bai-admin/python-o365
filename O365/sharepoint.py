@@ -435,7 +435,7 @@ class SharepointList(ApiComponent):
 
         data = response.json()
 
-        return self.list_item_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.list_item_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_list_columns(self):
         """Returns the sharepoint list columns"""
@@ -450,7 +450,7 @@ class SharepointList(ApiComponent):
         data = response.json()
 
         return [
-            self.list_column_constructor(parent=self, **{self._cloud_data_key: column})
+            self.list_column_constructor(parent=self, raw_response_text=json.dumps(column), **{self._cloud_data_key: column})
             for column in data.get("value", [])
         ]
 
@@ -470,7 +470,7 @@ class SharepointList(ApiComponent):
 
         data = response.json()
 
-        return self.list_item_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.list_item_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def delete_list_item(self, item_id):
         """Delete an existing list item
@@ -607,7 +607,7 @@ class Site(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         return [
-            self.__class__(parent=self, **{self._cloud_data_key: site})
+            self.__class__(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
             for site in data.get("value", [])
         ]
 
@@ -625,7 +625,7 @@ class Site(ApiComponent):
         data = response.json()
 
         return [
-            self.list_constructor(parent=self, **{self._cloud_data_key: lst})
+            self.list_constructor(parent=self, raw_response_text=json.dumps(lst), **{self._cloud_data_key: lst})
             for lst in data.get("value", [])
         ]
 
@@ -647,7 +647,7 @@ class Site(ApiComponent):
 
         data = response.json()
 
-        return self.list_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.list_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def create_list(self, list_data):
         """
@@ -663,7 +663,7 @@ class Site(ApiComponent):
             return None
 
         data = response.json()
-        return self.list_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.list_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
 
 class Sharepoint(ApiComponent):
@@ -723,7 +723,7 @@ class Sharepoint(ApiComponent):
 
             # Everything received from cloud must be passed as self._cloud_data_key
             sites += [
-                self.site_constructor(parent=self, **{self._cloud_data_key: site})
+                self.site_constructor(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
                 for site in data.get("value", [])
             ]
 
@@ -778,4 +778,4 @@ class Sharepoint(ApiComponent):
 
         data = response.json()
 
-        return self.site_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.site_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})

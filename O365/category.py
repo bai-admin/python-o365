@@ -165,7 +165,7 @@ class Categories(ApiComponent):
         data = response.json()
 
         return [
-            self.category_constructor(parent=self, **{self._cloud_data_key: category})
+            self.category_constructor(parent=self, raw_response_text=json.dumps(category), **{self._cloud_data_key: category})
             for category in data.get("value", [])
         ]
 
@@ -179,7 +179,7 @@ class Categories(ApiComponent):
 
         data = response.json()
 
-        return self.category_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.category_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def create_category(self, name, color="auto"):
         """

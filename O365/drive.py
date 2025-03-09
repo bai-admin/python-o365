@@ -674,7 +674,7 @@ class DriveItem(ApiComponent):
 
         drive = response.json()
 
-        return Drive(parent=self, main_resource="", **{self._cloud_data_key: drive})
+        return Drive(parent=self, main_resource="", raw_response_text=json.dumps(drive), **{self._cloud_data_key: drive})
 
     def get_thumbnails(self, size=None):
         """Returns this Item Thumbnails. Thumbnails are not supported on
@@ -926,7 +926,7 @@ class DriveItem(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return DriveItemVersion(parent=self, **{self._cloud_data_key: data})
+        return DriveItemVersion(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def share_with_link(
         self,
@@ -968,7 +968,7 @@ class DriveItem(ApiComponent):
         data = response.json()
 
         # return data.get('link', {}).get('webUrl')
-        return DriveItemPermission(parent=self, **{self._cloud_data_key: data})
+        return DriveItemPermission(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def share_with_invite(
         self,
@@ -1039,7 +1039,7 @@ class DriveItem(ApiComponent):
 
         data = response.json()
 
-        return DriveItemPermission(parent=self, **{self._cloud_data_key: data})
+        return DriveItemPermission(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_permissions(self):
         """Returns a list of DriveItemPermissions with the
@@ -1266,7 +1266,7 @@ class Folder(DriveItem):
 
         folder = response.json()
 
-        return self._classifier(folder)(parent=self, **{self._cloud_data_key: folder})
+        return self._classifier(folder)(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
 
     def download_contents(self, to_folder=None):
         """This will download each file and folder sequentially.
@@ -1454,7 +1454,7 @@ class Folder(DriveItem):
 
             data = response.json()
 
-            return self._classifier(data)(parent=self, **{self._cloud_data_key: data})
+            return self._classifier(data)(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
         else:
             # Resumable Upload
             url = self.build_url(
@@ -1654,7 +1654,7 @@ class Drive(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self._classifier(data)(parent=self, **{self._cloud_data_key: data})
+        return self._classifier(data)(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def _base_get_list(
         self, url, limit=None, *, query=None, order_by=None, batch=None, params={}
@@ -1844,7 +1844,7 @@ class Drive(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self._classifier(data)(parent=self, **{self._cloud_data_key: data})
+        return self._classifier(data)(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_item_by_path(self, item_path):
         """Returns a DriveItem by it's absolute path: /path/to/file
@@ -1877,7 +1877,7 @@ class Drive(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self._classifier(data)(parent=self, **{self._cloud_data_key: data})
+        return self._classifier(data)(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_special_folder(self, name):
         """Returns the specified Special Folder
@@ -1911,7 +1911,7 @@ class Drive(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self._classifier(data)(parent=self, **{self._cloud_data_key: data})
+        return self._classifier(data)(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     @staticmethod
     def _classifier(item):
@@ -2152,7 +2152,7 @@ class Storage(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         drives = [
-            self.drive_constructor(parent=self, **{self._cloud_data_key: drive})
+            self.drive_constructor(parent=self, raw_response_text=json.dumps(drive), **{self._cloud_data_key: drive})
             for drive in data.get("value", [])
         ]
 

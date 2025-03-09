@@ -525,7 +525,7 @@ class Folder(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         tasks = (
-            self.task_constructor(parent=self, **{self._cloud_data_key: task})
+            self.task_constructor(parent=self, raw_response_text=json.dumps(task), **{self._cloud_data_key: task})
             for task in data.get("value", [])
         )
         return tasks
@@ -574,7 +574,7 @@ class Folder(ApiComponent):
                 task = task[0]
             else:
                 return None
-        return self.task_constructor(parent=self, **{self._cloud_data_key: task})
+        return self.task_constructor(parent=self, raw_response_text=json.dumps(task), **{self._cloud_data_key: task})
 
 
 class ToDo(ApiComponent):
@@ -649,7 +649,7 @@ class ToDo(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         contacts = [
-            self.folder_constructor(parent=self, **{self._cloud_data_key: x})
+            self.folder_constructor(parent=self, raw_response_text=json.dumps(x), **{self._cloud_data_key: x})
             for x in data.get("value", [])
         ]
 
@@ -674,7 +674,7 @@ class ToDo(ApiComponent):
         data = response.json()
 
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self.folder_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.folder_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_folder(self, folder_id=None, folder_name=None):
         """Returns a folder by it's id or name

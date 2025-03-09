@@ -219,7 +219,7 @@ class ChannelMessage(ChatMessage):
 
         data = response.json()
 
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_replies(self, limit=None, batch=None):
         """Returns a list of replies to the channel chat message
@@ -281,7 +281,7 @@ class ChannelMessage(ChatMessage):
             return None
 
         data = response.json()
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
 
 class Chat(ApiComponent):
@@ -391,7 +391,7 @@ class Chat(ApiComponent):
         if not response:
             return None
         data = response.json()
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def send_message(self, content=None, content_type="text"):
         """Sends a message to the chat
@@ -413,7 +413,7 @@ class Chat(ApiComponent):
             return None
 
         data = response.json()
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_members(self):
         """Returns a list of conversation members
@@ -425,7 +425,7 @@ class Chat(ApiComponent):
             return None
         data = response.json()
         members = [
-            self.member_constructor(parent=self, **{self._cloud_data_key: member})
+            self.member_constructor(parent=self, raw_response_text=json.dumps(member), **{self._cloud_data_key: member})
             for member in data.get("value", [])
         ]
         return members
@@ -442,7 +442,7 @@ class Chat(ApiComponent):
         if not response:
             return None
         data = response.json()
-        return self.member_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.member_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def __repr__(self):
         return "Chat: {}".format(self.chat_type)
@@ -560,7 +560,7 @@ class Channel(ApiComponent):
             return None
 
         data = response.json()
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_messages(self, limit=None, batch=None):
         """Returns a list of channel chat messages
@@ -624,7 +624,7 @@ class Channel(ApiComponent):
             return None
 
         data = response.json()
-        return self.message_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.message_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def __str__(self):
         return self.__repr__()
@@ -705,7 +705,7 @@ class Team(ApiComponent):
         data = response.json()
 
         return [
-            self.channel_constructor(parent=self, **{self._cloud_data_key: channel})
+            self.channel_constructor(parent=self, raw_response_text=json.dumps(channel), **{self._cloud_data_key: channel})
             for channel in data.get("value", [])
         ]
 
@@ -726,7 +726,7 @@ class Team(ApiComponent):
 
         data = response.json()
 
-        return self.channel_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.channel_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
 
 class App(ApiComponent):
@@ -843,7 +843,7 @@ class Teams(ApiComponent):
 
         data = response.json()
 
-        return self.presence_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.presence_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def set_my_presence(
         self,
@@ -917,7 +917,7 @@ class Teams(ApiComponent):
 
         data = response.json()
 
-        return self.presence_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.presence_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_my_teams(self):
         """Returns a list of teams that I am in
@@ -934,7 +934,7 @@ class Teams(ApiComponent):
         data = response.json()
 
         return [
-            self.team_constructor(parent=self, **{self._cloud_data_key: site})
+            self.team_constructor(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
             for site in data.get("value", [])
         ]
 
@@ -1000,7 +1000,7 @@ class Teams(ApiComponent):
         data = response.json()
 
         return [
-            self.channel_constructor(parent=self, **{self._cloud_data_key: channel})
+            self.channel_constructor(parent=self, raw_response_text=json.dumps(channel), **{self._cloud_data_key: channel})
             for channel in data.get("value", [])
         ]
 
@@ -1034,7 +1034,7 @@ class Teams(ApiComponent):
 
         data = response.json()
 
-        return self.channel_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.channel_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_channel(self, team_id, channel_id):
         """Returns the channel info for a given channel
@@ -1058,7 +1058,7 @@ class Teams(ApiComponent):
 
         data = response.json()
 
-        return self.channel_constructor(parent=self, **{self._cloud_data_key: data})
+        return self.channel_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
 
     def get_apps_in_team(self, team_id):
         """Returns a list of apps of a specified team
@@ -1079,6 +1079,6 @@ class Teams(ApiComponent):
         data = response.json()
 
         return [
-            self.app_constructor(parent=self, **{self._cloud_data_key: site})
+            self.app_constructor(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
             for site in data.get("value", [])
         ]
