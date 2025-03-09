@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import logging
 from collections import OrderedDict
 from enum import Enum
@@ -747,8 +748,8 @@ class Pagination(ApiComponent):
             raise StopIteration()
 
         data = response.json()
-        raw_text = response.text  # Store the raw response text
-        self.update_raw_response_text(raw_text)  # Use the update method
+        # Don't add the full raw response text to kwargs here
+        # We'll use individual message data for each constructor call
 
         self.next_link = data.get(NEXT_LINK_KEYWORD, None) or None
         data = data.get("value", [])
@@ -773,8 +774,6 @@ class Pagination(ApiComponent):
             # Everything from cloud must be passed as self._cloud_data_key
             kwargs = {}
             kwargs.update(self.extra_args)
-            # Add raw response text to kwargs
-            kwargs["raw_response_text"] = raw_text
 
             # Reset data list for new items
             self.data = []
@@ -783,6 +782,8 @@ class Pagination(ApiComponent):
             if callable(self.constructor) and not isinstance(self.constructor, type):
                 for value in data:
                     kwargs[self._cloud_data_key] = value
+                    # Add serialized individual message data as raw_response_text
+                    kwargs["raw_response_text"] = json.dumps(value)
                     # The constructor is a function that returns a class constructor
                     constructed_type = self.constructor(value)
                     # Make sure constructed_type is callable before trying to call it
@@ -794,6 +795,8 @@ class Pagination(ApiComponent):
             else:
                 for value in data:
                     kwargs[self._cloud_data_key] = value
+                    # Add serialized individual message data as raw_response_text
+                    kwargs["raw_response_text"] = json.dumps(value)
                     self.data.append(self.constructor(parent=self.parent, **kwargs))
         else:
             self.data = list(data)

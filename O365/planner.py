@@ -1,3 +1,4 @@
+import json
 import logging
 from datetime import date, datetime
 
@@ -366,6 +367,7 @@ class Task(ApiComponent):
 
         return self.task_details_constructor(
             parent=self,
+            raw_response_text=json.dumps(data),  # Pass the raw response text
             **{self._cloud_data_key: data},
         )
 
@@ -790,7 +792,13 @@ class Plan(ApiComponent):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         tasks = [
-            self.task_constructor(parent=self, **{self._cloud_data_key: task})
+            self.task_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    task
+                ),  # Pass just this task's data as JSON
+                **{self._cloud_data_key: task},
+            )
             for task in data.get("value", [])
         ]
 
@@ -800,6 +808,7 @@ class Plan(ApiComponent):
                 data=tasks,
                 constructor=self.task_constructor,
                 next_link=next_link,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return tasks
@@ -826,6 +835,7 @@ class Plan(ApiComponent):
 
         return self.plan_details_constructor(
             parent=self,
+            raw_response_text=json.dumps(data),  # Pass the raw response text
             **{self._cloud_data_key: data},
         )
 
@@ -1006,6 +1016,7 @@ class Planner(ApiComponent):
 
         return self.plan_constructor(
             parent=self,
+            raw_response_text=json.dumps(data),  # Pass the raw response text
             **{self._cloud_data_key: data},
         )
 

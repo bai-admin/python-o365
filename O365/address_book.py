@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import logging
 
 from dateutil.parser import parse
@@ -764,7 +765,13 @@ class BaseContactFolder(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         contacts = (
-            self.contact_constructor(parent=self, **{self._cloud_data_key: contact})
+            self.contact_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    contact
+                ),  # pass just this contact's raw response
+                **{self._cloud_data_key: contact},
+            )
             for contact in data.get("value", [])
         )
 
@@ -777,6 +784,7 @@ class BaseContactFolder(ApiComponent):
                 constructor=self.contact_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return contacts
@@ -857,6 +865,7 @@ class ContactFolder(BaseContactFolder):
             con=self.con,
             protocol=self.protocol,
             main_resource=self.main_resource,
+            raw_response_text=json.dumps(folder),  # Pass the raw response text
             **{self._cloud_data_key: folder},
         )
 

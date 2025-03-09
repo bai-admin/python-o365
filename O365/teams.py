@@ -1,3 +1,4 @@
+import json
 import logging
 from enum import Enum
 
@@ -240,7 +241,13 @@ class ChannelMessage(ChatMessage):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         replies = [
-            self.message_constructor(parent=self, **{self._cloud_data_key: reply})
+            self.message_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    reply
+                ),  # Pass just this reply's data as JSON
+                **{self._cloud_data_key: reply},
+            )
             for reply in data.get("value", [])
         ]
 
@@ -251,6 +258,7 @@ class ChannelMessage(ChatMessage):
                 constructor=self.message_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return replies
@@ -348,7 +356,13 @@ class Chat(ApiComponent):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         messages = [
-            self.message_constructor(parent=self, **{self._cloud_data_key: message})
+            self.message_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    message
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: message},
+            )
             for message in data.get("value", [])
         ]
 
@@ -359,6 +373,7 @@ class Chat(ApiComponent):
                 constructor=self.message_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return messages
@@ -567,7 +582,13 @@ class Channel(ApiComponent):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         messages = [
-            self.message_constructor(parent=self, **{self._cloud_data_key: message})
+            self.message_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    message
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: message},
+            )
             for message in data.get("value", [])
         ]
 
@@ -578,6 +599,7 @@ class Channel(ApiComponent):
                 constructor=self.message_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return messages
@@ -936,7 +958,13 @@ class Teams(ApiComponent):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         chats = [
-            self.chat_constructor(parent=self, **{self._cloud_data_key: message})
+            self.chat_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    message
+                ),  # Pass just this chat message's data as JSON
+                **{self._cloud_data_key: message},
+            )
             for message in data.get("value", [])
         ]
 
@@ -947,6 +975,7 @@ class Teams(ApiComponent):
                 constructor=self.chat_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return chats

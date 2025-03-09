@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import logging
 from enum import Enum
 
@@ -377,6 +378,7 @@ class Folder(ApiComponent):
                 constructor=self_class,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return folders
@@ -409,7 +411,7 @@ class Folder(ApiComponent):
             return self.message_constructor(
                 parent=self,
                 download_attachments=download_attachments,
-                raw_response_text=response.text,  # Pass the raw response text
+                raw_response_text=json.dumps(message),  # Pass the raw response text
                 **{self._cloud_data_key: message},
             )
 
@@ -496,7 +498,9 @@ class Folder(ApiComponent):
             self.message_constructor(
                 parent=self,
                 download_attachments=download_attachments,
-                raw_response_text=raw_text,  # Pass the raw response text
+                raw_response_text=json.dumps(
+                    message
+                ),  # Pass just this message's data as JSON
                 **{self._cloud_data_key: message},
             )
             for message in messages_iterator
@@ -511,7 +515,7 @@ class Folder(ApiComponent):
                 next_link=next_link,
                 limit=limit,
                 download_attachments=download_attachments,
-                raw_response_text=raw_text,  # Pass the raw response text
+                raw_response_text=raw_text,  # Still need to pass full response for pagination mechanics
                 show_progress=show_progress,  # Pass the progress flag
                 progress_unit="msg",  # Pass the progress unit
             )
@@ -598,6 +602,7 @@ class Folder(ApiComponent):
             con=self.con,
             protocol=self.protocol,
             main_resource=self.main_resource,
+            raw_response_text=json.dumps(folder),  # Pass the raw response text
             **{self._cloud_data_key: folder},
         )
 
@@ -735,6 +740,7 @@ class Folder(ApiComponent):
         return self_class(
             con=self.con,
             main_resource=self.main_resource,
+            raw_response_text=json.dumps(folder),  # Pass the raw response text
             **{self._cloud_data_key: folder},
         )
 

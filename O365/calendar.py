@@ -1,5 +1,6 @@
 import calendar
 import datetime as dt
+import json
 import logging
 from zoneinfo import ZoneInfo
 
@@ -1483,7 +1484,13 @@ class Event(ApiComponent, AttachableMixin, HandleRecipientsMixin):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         events = (
-            self.__class__(parent=self, **{self._cloud_data_key: event})
+            self.__class__(
+                parent=self,
+                raw_response_text=json.dumps(
+                    event
+                ),  # pass just this event's raw response text
+                **{self._cloud_data_key: event},
+            )
             for event in data.get("value", [])
         )
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -1494,6 +1501,7 @@ class Event(ApiComponent, AttachableMixin, HandleRecipientsMixin):
                 constructor=self.__class__,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return events
@@ -1903,6 +1911,9 @@ class Calendar(ApiComponent, HandleRecipientsMixin):
             self.event_constructor(
                 parent=self,
                 download_attachments=download_attachments,
+                raw_response_text=json.dumps(
+                    event
+                ),  # pass just this event's raw response text
                 **{self._cloud_data_key: event},
             )
             for event in data.get("value", [])
@@ -1915,6 +1926,7 @@ class Calendar(ApiComponent, HandleRecipientsMixin):
                 constructor=self.event_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return events

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from dateutil.parser import parse
@@ -125,6 +126,7 @@ class SharepointListItem(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(created_by),  # Pass the raw response text
                 **{self._cloud_data_key: created_by},
             )
             if created_by
@@ -135,6 +137,7 @@ class SharepointListItem(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(modified_by),  # Pass the raw response text
                 **{self._cloud_data_key: modified_by},
             )
             if modified_by
@@ -285,6 +288,7 @@ class SharepointList(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(created_by),  # Pass the raw response text
                 **{self._cloud_data_key: created_by},
             )
             if created_by
@@ -295,6 +299,7 @@ class SharepointList(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(modified_by),  # Pass the raw response text
                 **{self._cloud_data_key: modified_by},
             )
             if modified_by
@@ -382,7 +387,13 @@ class SharepointList(ApiComponent):
         next_link = data.get(NEXT_LINK_KEYWORD, None)
 
         items = [
-            self.list_item_constructor(parent=self, **{self._cloud_data_key: item})
+            self.list_item_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this item's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         ]
 
@@ -393,6 +404,7 @@ class SharepointList(ApiComponent):
                 constructor=self.list_item_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return items

@@ -1,3 +1,4 @@
+import json
 import logging
 import warnings
 from pathlib import Path
@@ -299,6 +300,7 @@ class DriveItemVersion(ApiComponent, DownloadableMixin):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(modified_by),  # Pass the raw response text
                 **{self._cloud_data_key: modified_by},
             )
             if modified_by
@@ -566,6 +568,7 @@ class DriveItem(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(created_by),  # Pass the raw response text
                 **{self._cloud_data_key: created_by},
             )
             if created_by
@@ -576,6 +579,7 @@ class DriveItem(ApiComponent):
             Contact(
                 con=self.con,
                 protocol=self.protocol,
+                raw_response_text=json.dumps(modified_by),  # Pass the raw response text
                 **{self._cloud_data_key: modified_by},
             )
             if modified_by
@@ -890,7 +894,13 @@ class DriveItem(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         return [
-            DriveItemVersion(parent=self, **{self._cloud_data_key: item})
+            DriveItemVersion(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this version's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         ]
 
@@ -1053,7 +1063,13 @@ class DriveItem(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         return [
-            DriveItemPermission(parent=self, **{self._cloud_data_key: item})
+            DriveItemPermission(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this permission's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         ]
 
@@ -1180,7 +1196,13 @@ class Folder(DriveItem):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         items = (
-            self._classifier(item)(parent=self, **{self._cloud_data_key: item})
+            self._classifier(item)(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         )
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -1191,6 +1213,7 @@ class Folder(DriveItem):
                 constructor=self._classifier,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return items
@@ -1340,7 +1363,13 @@ class Folder(DriveItem):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         items = (
-            self._classifier(item)(parent=self, **{self._cloud_data_key: item})
+            self._classifier(item)(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         )
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -1351,6 +1380,7 @@ class Folder(DriveItem):
                 constructor=self._classifier,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return items
@@ -1658,7 +1688,13 @@ class Drive(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         items = (
-            self._classifier(item)(parent=self, **{self._cloud_data_key: item})
+            self._classifier(item)(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         )
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -1669,6 +1705,7 @@ class Drive(ApiComponent):
                 constructor=self._classifier,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return items
@@ -1978,7 +2015,13 @@ class Drive(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         items = (
-            self._classifier(item)(parent=self, **{self._cloud_data_key: item})
+            self._classifier(item)(
+                parent=self,
+                raw_response_text=json.dumps(
+                    item
+                ),  # Pass just this message's data as JSON
+                **{self._cloud_data_key: item},
+            )
             for item in data.get("value", [])
         )
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -1989,6 +2032,7 @@ class Drive(ApiComponent):
                 constructor=self._classifier,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return items
@@ -2063,6 +2107,7 @@ class Storage(ApiComponent):
             con=self.con,
             protocol=self.protocol,
             main_resource=self.main_resource,
+            raw_response_text=json.dumps(drive),  # Pass the raw response text
             **{self._cloud_data_key: drive},
         )
 
@@ -2089,6 +2134,7 @@ class Storage(ApiComponent):
             con=self.con,
             protocol=self.protocol,
             main_resource=self.main_resource,
+            raw_response_text=json.dumps(drive),  # Pass the raw response text
             **{self._cloud_data_key: drive},
         )
 

@@ -1,3 +1,4 @@
+import json
 import logging
 
 from dateutil.parser import parse
@@ -299,7 +300,13 @@ class Directory(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         users = (
-            self.user_constructor(parent=self, **{self._cloud_data_key: user})
+            self.user_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    user
+                ),  # pass just this user's raw response text
+                **{self._cloud_data_key: user},
+            )
             for user in data.get("value", [])
         )
 
@@ -312,6 +319,7 @@ class Directory(ApiComponent):
                 constructor=self.user_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return users
@@ -416,7 +424,13 @@ class Directory(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         direct_reports = (
-            self.user_constructor(parent=self, **{self._cloud_data_key: user})
+            self.user_constructor(
+                parent=self,
+                raw_response_text=json.dumps(
+                    user
+                ),  # pass just this user's raw response text
+                **{self._cloud_data_key: user},
+            )
             for user in data.get("value", [])
         )
 
@@ -429,6 +443,7 @@ class Directory(ApiComponent):
                 constructor=self.user_constructor,
                 next_link=next_link,
                 limit=limit,
+                raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
         else:
             return direct_reports
