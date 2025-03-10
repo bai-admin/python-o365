@@ -53,6 +53,7 @@ SITES_RESOURCE = "sites"
 
 
 NEXT_LINK_KEYWORD = "@odata.nextLink"
+DELTA_LINK_KEYWORD = "@odata.deltaLink"
 
 log = logging.getLogger(__name__)
 

@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from .message import Message
 from .utils import (
+    DELTA_LINK_KEYWORD,
     NEXT_LINK_KEYWORD,
     ApiComponent,
     OutlookWellKnowFolderNames,
@@ -257,6 +258,7 @@ class Folder(ApiComponent):
         "get_folder": "/mailFolders/{id}",
         "root_messages": "/messages",
         "folder_messages": "/mailFolders/{id}/messages",
+        "folder_messages_delta": "/mailFolders/{id}/messages/delta",
         "copy_folder": "/mailFolders/{id}/copy",
         "move_folder": "/mailFolders/{id}/move",
         "message": "/messages/{id}",
@@ -367,7 +369,11 @@ class Folder(ApiComponent):
         # Everything received from cloud must be passed as self._cloud_data_key
         self_class = getattr(self, "folder_constructor", type(self))
         folders = [
-            self_class(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
+            self_class(
+                parent=self,
+                raw_response_text=json.dumps(folder),
+                **{self._cloud_data_key: folder},
+            )
             for folder in data.get("value", [])
         ]
         next_link = data.get(NEXT_LINK_KEYWORD, None)
@@ -508,20 +514,178 @@ class Folder(ApiComponent):
 
         next_link = data.get(NEXT_LINK_KEYWORD, None)
         if batch and next_link:
+            # If we have a nextLink and we're using batch, create a pagination object
+            # We'll need to handle obtaining the final deltaLink after all pages
             return Pagination(
                 parent=self,
                 data=messages,
                 constructor=self.message_constructor,
                 next_link=next_link,
                 limit=limit,
-                download_attachments=download_attachments,
                 raw_response_text=raw_text,  # Still need to pass full response for pagination mechanics
+                download_attachments=download_attachments,
+                delta_endpoint=False,  # Flag to indicate this is not a delta query
                 show_progress=show_progress,  # Pass the progress flag
                 progress_unit="msg",  # Pass the progress unit
             )
         else:
             # Convert generator to list if showing progress to ensure tqdm works correctly
             return list(messages) if show_progress else messages
+
+    def get_messages_delta(
+        self,
+        delta_token=None,
+        *,
+        limit=None,
+        change_type=None,
+        batch=None,
+        download_attachments=False,
+        show_progress=False,
+        select=None,
+        expand=None,
+        filter_query=None,
+        order_by=None,
+        prefer_max_page_size=None,
+    ):
+        """
+        Get message changes (delta) in this folder using delta query
+
+        :param str delta_token: delta token from a previous delta query response
+        :param int limit: limits the result set. Over 999 uses batch.
+        :param str change_type: Filter for specific change types: 'created', 'updated', or 'deleted'
+        :param int batch: batch size, retrieves items in batches allowing to retrieve more items than the limit.
+        :param bool download_attachments: whether or not to download attachments
+        :param bool show_progress: whether to show a progress bar using tqdm
+        :param select: properties to include in the response
+        :type select: list or str or None
+        :param expand: relationships to expand in the response
+        :type expand: list or str or None
+        :param filter_query: filter query for messages (limited to receivedDateTime filters)
+        :type filter_query: str or None
+        :param order_by: order by expression (only receivedDateTime desc is supported)
+        :type order_by: str or None
+        :param int prefer_max_page_size: preferred maximum page size for the response
+        :return: tuple with (messages, delta_token)
+        :rtype: tuple(list[Message] or Pagination, str)
+        """
+        if self.root:
+            url = self.build_url(self._endpoints.get("root_messages")) + "/delta"
+        else:
+            url = self.build_url(
+                self._endpoints.get("folder_messages_delta").format(id=self.folder_id)
+            )
+
+        if delta_token:
+            # If delta_token is a full URL, use it directly
+            if delta_token.startswith("https://"):
+                url = delta_token
+                params = {}
+            else:
+                # Otherwise, add it as a query parameter
+                params = {"$deltatoken": delta_token}
+        else:
+            params = {}
+
+        if change_type:
+            if change_type not in ("created", "updated", "deleted"):
+                raise ValueError(
+                    "change_type must be one of 'created', 'updated', or 'deleted'"
+                )
+            params["changeType"] = change_type
+
+        if limit is None or limit > self.protocol.max_top_value:
+            batch = self.protocol.max_top_value
+
+        if batch:
+            params["$top"] = batch
+        elif limit:
+            params["$top"] = limit
+
+        # Add support for select parameter
+        if select:
+            if isinstance(select, list):
+                params["$select"] = ",".join(select)
+            else:
+                params["$select"] = select
+
+        # Add support for expand parameter
+        if expand:
+            if isinstance(expand, list):
+                params["$expand"] = ",".join(expand)
+            else:
+                params["$expand"] = expand
+
+        # Add support for filter (with validation for delta query limitations)
+        if filter_query:
+            # Check if the filter is one of the supported expressions for delta queries
+            if not (
+                filter_query.startswith("receivedDateTime ge ")
+                or filter_query.startswith("receivedDateTime gt ")
+            ):
+                raise ValueError(
+                    "For delta queries, filter is limited to 'receivedDateTime ge {value}' or 'receivedDateTime gt {value}'"
+                )
+            params["$filter"] = filter_query
+
+        # Add support for orderby (with validation for delta query limitations)
+        if order_by:
+            if order_by != "receivedDateTime desc":
+                raise ValueError(
+                    "For delta queries, orderby is limited to 'receivedDateTime desc'"
+                )
+            params["$orderby"] = order_by
+
+        # Set up the headers
+        headers = {}
+        if prefer_max_page_size:
+            headers["Prefer"] = f"odata.maxpagesize={prefer_max_page_size}"
+
+        # Add headers to the request if specified
+        response = self.con.get(
+            url, params=params, headers=headers if headers else None
+        )
+        if not response:
+            return [], None
+
+        data = response.json()
+
+        # Process the messages
+        messages = []
+        for message_data in data.get("value", []):
+            message = self.message_constructor(
+                parent=self,
+                download_attachments=download_attachments,
+                raw_response_text=json.dumps(message_data),
+                **{self._cloud_data_key: message_data},
+            )
+            messages.append(message)
+
+        # Check for deltaLink or nextLink
+        delta_link = data.get(DELTA_LINK_KEYWORD, None)
+        next_link = data.get(NEXT_LINK_KEYWORD, None)
+
+        if batch and next_link:
+            # If we have a nextLink and we're using batch, create a pagination object
+            # We'll need to handle obtaining the final deltaLink after all pages
+            return (
+                Pagination(
+                    parent=self,
+                    data=messages,
+                    constructor=self.message_constructor,
+                    next_link=next_link,
+                    limit=limit,
+                    raw_response_text=response.text,
+                    download_attachments=download_attachments,
+                    delta_endpoint=True,  # Flag to indicate this is a delta query
+                    show_progress=show_progress,  # Pass the progress flag
+                    progress_unit="msg",  # Pass the progress unit
+                    prefer_max_page_size=prefer_max_page_size,  # Pass the prefer header value
+                ),
+                delta_link,
+            )
+        else:
+            # Either we have all the results or we're not using batch
+            return messages, delta_link
 
     def create_child_folder(self, folder_name):
         """Creates a new child folder under this folder
@@ -548,7 +712,11 @@ class Folder(ApiComponent):
 
         self_class = getattr(self, "folder_constructor", type(self))
         # Everything received from cloud must be passed as self._cloud_data_key
-        return self_class(parent=self, raw_response_text=json.dumps(folder), **{self._cloud_data_key: folder})
+        return self_class(
+            parent=self,
+            raw_response_text=json.dumps(folder),
+            **{self._cloud_data_key: folder},
+        )
 
     def get_folder(self, *, folder_id=None, folder_name=None):
         """Get a folder by it's id or name
