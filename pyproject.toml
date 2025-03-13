@@ -29,6 +29,7 @@ dependencies = [
     "requests>=2.32.3",
     "tzdata>=2024.2",
     "tzlocal>=5.2",
+    "xmlschema>=3.4.3"
 ]
 
 [dependency-groups]

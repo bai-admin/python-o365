@@ -39,7 +39,8 @@ class SharepointListColumn(ApiComponent):
         self.description = cloud_data.get(self._cc("description"), None)
         self.display_name = cloud_data.get(self._cc("displayName"), None)
         self.enforce_unique_values = cloud_data.get(
-            self._cc("enforceUniqueValues"), None
+            self._cc("enforceUniqueValues"),
+            None,
         )
         self.hidden = cloud_data.get(self._cc("hidden"), None)
         self.indexed = cloud_data.get(self._cc("indexed"), None)
@@ -71,7 +72,7 @@ class SharepointListColumn(ApiComponent):
             self.field_type = None
 
     def __repr__(self):
-        return "List Column: {0}-{1}".format(self.display_name, self.field_type)
+        return f"List Column: {self.display_name}-{self.field_type}"
 
     def __eq__(self, other):
         return self.object_id == other.object_id
@@ -147,13 +148,14 @@ class SharepointListItem(ApiComponent):
         self.web_url = cloud_data.get(self._cc("webUrl"), None)
 
         self.content_type_id = cloud_data.get(self._cc("contentType"), {}).get(
-            "id", None
+            "id",
+            None,
         )
 
         self.fields = cloud_data.get(self._cc("fields"), None)
 
     def __repr__(self):
-        return "List Item: {}".format(self.web_url)
+        return f"List Item: {self.web_url}"
 
     def __eq__(self, other):
         return self.object_id == other.object_id
@@ -177,18 +179,16 @@ class SharepointListItem(ApiComponent):
         return True
 
     def update_fields(self, updates):
-        """
-        Update the value for a field(s) in the listitem
+        """Update the value for a field(s) in the listitem
 
         :param update: A dict of {'field name': newvalue}
         """
-
         for field in updates:
             if self._valid_field(field):
                 self._track_changes.add(field)
             else:
                 raise ValueError(
-                    '"{}" is not a valid internal field name'.format(field)
+                    f'"{field}" is not a valid internal field name',
                 )
 
         # Update existing instance of fields, or create a fields instance if needed
@@ -199,12 +199,11 @@ class SharepointListItem(ApiComponent):
 
     def save_updates(self):
         """Save the updated fields to the cloud"""
-
         if not self._track_changes:
             return True  # there's nothing to update
 
         url = self.build_url(
-            self._endpoints.get("update_list_item").format(item_id=self.object_id)
+            self._endpoints.get("update_list_item").format(item_id=self.object_id),
         )
         update = {
             field: value
@@ -220,7 +219,7 @@ class SharepointListItem(ApiComponent):
 
     def delete(self):
         url = self.build_url(
-            self._endpoints.get("delete_list_item").format(item_id=self.object_id)
+            self._endpoints.get("delete_list_item").format(item_id=self.object_id),
         )
         response = self.con.delete(url)
         return bool(response)
@@ -262,8 +261,8 @@ class SharepointList(ApiComponent):
         )
 
         # prefix with the current known list
-        resource_prefix = "/lists/{list_id}".format(list_id=self.object_id)
-        main_resource = "{}{}".format(main_resource, resource_prefix)
+        resource_prefix = f"/lists/{self.object_id}"
+        main_resource = f"{main_resource}{resource_prefix}"
 
         super().__init__(
             protocol=parent.protocol if parent else kwargs.get("protocol"),
@@ -309,7 +308,8 @@ class SharepointList(ApiComponent):
         # list info
         lst_info = cloud_data.get("list", {})
         self.content_types_enabled = lst_info.get(
-            self._cc("contentTypesEnabled"), False
+            self._cc("contentTypesEnabled"),
+            False,
         )
         self.hidden = lst_info.get(self._cc("hidden"), False)
         self.template = lst_info.get(self._cc("template"), False)
@@ -327,7 +327,7 @@ class SharepointList(ApiComponent):
     def build_field_filter(self, expand_fields):
         if expand_fields == True:
             return "fields"
-        elif isinstance(expand_fields, list):
+        if isinstance(expand_fields, list):
             result = ""
             for field in expand_fields:
                 if field in self.column_name_cw.values():
@@ -336,13 +336,19 @@ class SharepointList(ApiComponent):
                     result += self.column_name_cw[field] + ","
                 else:
                     log.warning(
-                        '"{}" is not a valid field name - check case'.format(field)
+                        f'"{field}" is not a valid field name - check case',
                     )
             if result != "":
                 return "fields(select=" + result.rstrip(",") + ")"
 
     def get_items(
-        self, limit=None, *, query=None, order_by=None, batch=None, expand_fields=None
+        self,
+        limit=None,
+        *,
+        query=None,
+        order_by=None,
+        batch=None,
+        expand_fields=None,
     ):
         """Returns a collection of Sharepoint Items
         :param int limit: max no. of items to get. Over 999 uses batch.
@@ -358,7 +364,6 @@ class SharepointList(ApiComponent):
         :return: list of Sharepoint Items
         :rtype: list[SharepointListItem] or Pagination
         """
-
         url = self.build_url(self._endpoints.get("get_items"))
 
         if limit is None or limit > self.protocol.max_top_value:
@@ -390,7 +395,7 @@ class SharepointList(ApiComponent):
             self.list_item_constructor(
                 parent=self,
                 raw_response_text=json.dumps(
-                    item
+                    item,
                 ),  # Pass just this item's data as JSON
                 **{self._cloud_data_key: item},
             )
@@ -406,8 +411,7 @@ class SharepointList(ApiComponent):
                 limit=limit,
                 raw_response_text=response.text,  # Still need to pass full response for pagination mechanics
             )
-        else:
-            return items
+        return items
 
     def get_item_by_id(self, item_id, expand_fields=None):
         """Returns a sharepoint list item based on id
@@ -418,9 +422,8 @@ class SharepointList(ApiComponent):
         :return: Sharepoint Item
         :rtype: SharepointListItem
         """
-
         url = self.build_url(
-            self._endpoints.get("get_item_by_id").format(item_id=item_id)
+            self._endpoints.get("get_item_by_id").format(item_id=item_id),
         )
 
         params = {}
@@ -435,11 +438,14 @@ class SharepointList(ApiComponent):
 
         data = response.json()
 
-        return self.list_item_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
+        return self.list_item_constructor(
+            parent=self,
+            raw_response_text=json.dumps(data),
+            **{self._cloud_data_key: data},
+        )
 
     def get_list_columns(self):
         """Returns the sharepoint list columns"""
-
         url = self.build_url(self._endpoints.get("get_list_columns"))
 
         response = self.con.get(url)
@@ -450,7 +456,11 @@ class SharepointList(ApiComponent):
         data = response.json()
 
         return [
-            self.list_column_constructor(parent=self, raw_response_text=json.dumps(column), **{self._cloud_data_key: column})
+            self.list_column_constructor(
+                parent=self,
+                raw_response_text=json.dumps(column),
+                **{self._cloud_data_key: column},
+            )
             for column in data.get("value", [])
         ]
 
@@ -461,7 +471,6 @@ class SharepointList(ApiComponent):
 
         :rtype: SharepointListItem
         """
-
         url = self.build_url(self._endpoints.get("get_items"))
 
         response = self.con.post(url, {"fields": new_data})
@@ -470,16 +479,19 @@ class SharepointList(ApiComponent):
 
         data = response.json()
 
-        return self.list_item_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
+        return self.list_item_constructor(
+            parent=self,
+            raw_response_text=json.dumps(data),
+            **{self._cloud_data_key: data},
+        )
 
     def delete_list_item(self, item_id):
         """Delete an existing list item
 
         :param item_id: Id of the item to be delted
         """
-
         url = self.build_url(
-            self._endpoints.get("get_item_by_id").format(item_id=item_id)
+            self._endpoints.get("get_item_by_id").format(item_id=item_id),
         )
 
         response = self.con.delete(url)
@@ -524,11 +536,11 @@ class Site(ApiComponent):
         )
 
         # prefix with the current known site
-        resource_prefix = "sites/{site_id}".format(site_id=self.object_id)
+        resource_prefix = f"sites/{self.object_id}"
         main_resource = (
             resource_prefix
             if isinstance(parent, Site)
-            else "{}{}".format(main_resource, resource_prefix)
+            else f"{main_resource}{resource_prefix}"
         )
 
         super().__init__(
@@ -553,14 +565,15 @@ class Site(ApiComponent):
 
         # site storage to access Drives and DriveItems
         self.site_storage = Storage(
-            parent=self, main_resource="/sites/{id}".format(id=self.object_id)
+            parent=self,
+            main_resource=f"/sites/{self.object_id}",
         )
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return "Site: {}".format(self.name)
+        return f"Site: {self.name}"
 
     def __eq__(self, other):
         return self.object_id == other.object_id
@@ -596,7 +609,7 @@ class Site(ApiComponent):
         :rtype: list[Site]
         """
         url = self.build_url(
-            self._endpoints.get("get_subsites").format(id=self.object_id)
+            self._endpoints.get("get_subsites").format(id=self.object_id),
         )
 
         response = self.con.get(url)
@@ -607,7 +620,11 @@ class Site(ApiComponent):
 
         # Everything received from cloud must be passed as self._cloud_data_key
         return [
-            self.__class__(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
+            self.__class__(
+                parent=self,
+                raw_response_text=json.dumps(site),
+                **{self._cloud_data_key: site},
+            )
             for site in data.get("value", [])
         ]
 
@@ -625,20 +642,21 @@ class Site(ApiComponent):
         data = response.json()
 
         return [
-            self.list_constructor(parent=self, raw_response_text=json.dumps(lst), **{self._cloud_data_key: lst})
+            self.list_constructor(
+                parent=self,
+                raw_response_text=json.dumps(lst),
+                **{self._cloud_data_key: lst},
+            )
             for lst in data.get("value", [])
         ]
 
     def get_list_by_name(self, display_name):
-        """
-        Returns a sharepoint list based on the display name of the list
-        """
-
+        """Returns a sharepoint list based on the display name of the list"""
         if not display_name:
             raise ValueError("Must provide a valid list display name")
 
         url = self.build_url(
-            self._endpoints.get("get_list_by_name").format(display_name=display_name)
+            self._endpoints.get("get_list_by_name").format(display_name=display_name),
         )
 
         response = self.con.get(url)
@@ -647,11 +665,14 @@ class Site(ApiComponent):
 
         data = response.json()
 
-        return self.list_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
+        return self.list_constructor(
+            parent=self,
+            raw_response_text=json.dumps(data),
+            **{self._cloud_data_key: data},
+        )
 
     def create_list(self, list_data):
-        """
-        Creates a SharePoint list.
+        """Creates a SharePoint list.
         :param list_data: Dict representation of list.
         :type list_data: Dict
         :rtype: list[SharepointList]
@@ -663,7 +684,11 @@ class Site(ApiComponent):
             return None
 
         data = response.json()
-        return self.list_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
+        return self.list_constructor(
+            parent=self,
+            raw_response_text=json.dumps(data),
+            **{self._cloud_data_key: data},
+        )
 
 
 class Sharepoint(ApiComponent):
@@ -710,7 +735,7 @@ class Sharepoint(ApiComponent):
             raise ValueError("Must provide a valid keyword")
 
         next_link = self.build_url(
-            self._endpoints.get("search").format(keyword=keyword)
+            self._endpoints.get("search").format(keyword=keyword),
         )
 
         sites = []
@@ -723,7 +748,11 @@ class Sharepoint(ApiComponent):
 
             # Everything received from cloud must be passed as self._cloud_data_key
             sites += [
-                self.site_constructor(parent=self, raw_response_text=json.dumps(site), **{self._cloud_data_key: site})
+                self.site_constructor(
+                    parent=self,
+                    raw_response_text=json.dumps(site),
+                    **{self._cloud_data_key: site},
+                )
                 for site in data.get("value", [])
             ]
 
@@ -764,7 +793,7 @@ class Sharepoint(ApiComponent):
             path_to_site = (
                 "/" + path_to_site if not path_to_site.startswith("/") else path_to_site
             )
-            site = "{}:{}:".format(host_name, path_to_site)
+            site = f"{host_name}:{path_to_site}:"
         elif num_args == 3:
             site = ",".join(args)
         else:
@@ -778,4 +807,8 @@ class Sharepoint(ApiComponent):
 
         data = response.json()
 
-        return self.site_constructor(parent=self, raw_response_text=json.dumps(data), **{self._cloud_data_key: data})
+        return self.site_constructor(
+            parent=self,
+            raw_response_text=json.dumps(data),
+            **{self._cloud_data_key: data},
+        )
